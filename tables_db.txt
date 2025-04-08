@@ -1,0 +1,84 @@
+Bảng Users (Người dùng)
+Tên cột	Kiểu dữ liệu	Mô tả
+user_id	INT, PK, AUTO_INCREMENT	Khóa chính, định danh người dùng
+username	VARCHAR(50), UNIQUE	Tên đăng nhập, không được trùng lặp
+password	VARCHAR(255)	Mật khẩu đã mã hóa
+email	VARCHAR(100), UNIQUE	Email người dùng
+role	ENUM('USER', 'MANAGER', 'ADMIN')	Phân quyền người dùng
+profile_picture	VARCHAR(255)	Đường dẫn ảnh đại diện
+created_at	TIMESTAMP	Thời điểm tạo tài khoản
+updated_at	TIMESTAMP	Thời điểm cập nhật thông tin gần nhất
+2. Bảng Images (Ảnh)
+Tên cột	Kiểu dữ liệu	Mô tả
+image_id	INT, PK, AUTO_INCREMENT	Khóa chính, định danh ảnh
+user_id	INT, FK	Khóa ngoại đến Users.user_id
+image_url	VARCHAR(255)	Đường dẫn đến file ảnh
+caption	TEXT	Mô tả cho ảnh
+is_public	BOOLEAN	Trạng thái công khai (true) hoặc riêng tư (false)
+created_at	TIMESTAMP	Thời điểm đăng ảnh
+updated_at	TIMESTAMP	Thời điểm cập nhật thông tin gần nhất
+3. Bảng Likes (Lượt thích ảnh)
+Tên cột	Kiểu dữ liệu	Mô tả
+like_id	INT, PK, AUTO_INCREMENT	Khóa chính
+user_id	INT, FK	Khóa ngoại đến Users.user_id
+image_id	INT, FK	Khóa ngoại đến Images.image_id
+created_at	TIMESTAMP	Thời điểm thích ảnh
+4. Bảng Comments (Bình luận)
+Tên cột	Kiểu dữ liệu	Mô tả
+comment_id	INT, PK, AUTO_INCREMENT	Khóa chính
+user_id	INT, FK	Khóa ngoại đến Users.user_id
+image_id	INT, FK	Khóa ngoại đến Images.image_id
+content	TEXT	Nội dung bình luận
+parent_comment_id	INT, FK, NULL	Khóa ngoại tới Comments.comment_id (cho phép trả lời comment)
+created_at	TIMESTAMP	Thời điểm bình luận
+updated_at	TIMESTAMP	Thời điểm cập nhật bình luận
+5. Bảng Comment_Likes (Lượt thích bình luận)
+Tên cột	Kiểu dữ liệu	Mô tả
+comment_like_id	INT, PK, AUTO_INCREMENT	Khóa chính
+user_id	INT, FK	Khóa ngoại đến Users.user_id
+comment_id	INT, FK	Khóa ngoại đến Comments.comment_id
+created_at	TIMESTAMP	Thời điểm thích bình luận
+6. Bảng Follows (Theo dõi)
+Tên cột	Kiểu dữ liệu	Mô tả
+follow_id	INT, PK, AUTO_INCREMENT	Khóa chính
+follower_id	INT, FK	Khóa ngoại đến Users.user_id (người theo dõi)
+following_id	INT, FK	Khóa ngoại đến Users.user_id (người được theo dõi)
+created_at	TIMESTAMP	Thời điểm bắt đầu theo dõi
+7. Bảng Tags (Thẻ)
+Tên cột	Kiểu dữ liệu	Mô tả
+tag_id	INT, PK, AUTO_INCREMENT	Khóa chính
+name	VARCHAR(50), UNIQUE	Tên thẻ
+created_at	TIMESTAMP	Thời điểm tạo thẻ
+8. Bảng Image_Tags (Liên kết ảnh-thẻ)
+Tên cột	Kiểu dữ liệu	Mô tả
+image_tag_id	INT, PK, AUTO_INCREMENT	Khóa chính
+image_id	INT, FK	Khóa ngoại đến Images.image_id
+tag_id	INT, FK	Khóa ngoại đến Tags.tag_id
+created_at	TIMESTAMP	Thời điểm gán thẻ cho ảnh
+9. Bảng Reports (Báo cáo)
+Tên cột	Kiểu dữ liệu	Mô tả
+report_id	INT, PK, AUTO_INCREMENT	Khóa chính
+reporter_id	INT, FK	Khóa ngoại đến Users.user_id (người báo cáo)
+image_id	INT, FK	Khóa ngoại đến Images.image_id
+reason	TEXT	Lý do báo cáo
+status	ENUM('pending', 'resolved')	Trạng thái xử lý
+resolved_by	INT, FK, NULL	Khóa ngoại đến Users.user_id (manager/admin xử lý)
+created_at	TIMESTAMP	Thời điểm báo cáo
+resolved_at	TIMESTAMP, NULL	Thời điểm xử lý báo cáo
+10. Bảng Notifications (Thông báo)
+Tên cột	Kiểu dữ liệu	Mô tả
+notification_id	INT, PK, AUTO_INCREMENT	Khóa chính
+user_id	INT, FK	Khóa ngoại đến Users.user_id (người nhận thông báo)
+type	ENUM('like', 'comment', 'follow', 'report_resolution', 'image_deletion')	Loại thông báo
+reference_id	INT	ID của đối tượng liên quan (image_id, comment_id, user_id, report_id)
+content	TEXT	Nội dung thông báo
+is_read	BOOLEAN	Trạng thái đã đọc hay chưa
+created_at	TIMESTAMP	Thời điểm tạo thông báo
+Chú thích quan hệ:
+•	User có thể upload nhiều ảnh (1-n)
+•	User có thể like nhiều ảnh, ảnh có thể được nhiều user like (n-n)
+•	User có thể bình luận nhiều ảnh, ảnh có thể có nhiều bình luận (n-n)
+•	User có thể theo dõi nhiều user khác và được theo dõi bởi nhiều user khác (n-n)
+•	Ảnh có thể được gắn nhiều tag, mỗi tag có thể thuộc nhiều ảnh (n-n)
+•	User có thể báo cáo nhiều ảnh (n-n)
+•	Bình luận có thể có nhiều bình luận con (self-reference)
