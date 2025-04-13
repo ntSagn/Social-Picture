@@ -20,32 +20,32 @@ function Home() {
         </section>
         <section className="mt-12 grid grid-cols-2 md:grid-cols-3 gap-6">
           <div className="relative bg-white rounded-lg shadow-md overflow-hidden">
-            <img src="https://via.placeholder.com/300" alt="Fern future home vibes" className="w-full h-40 object-cover" />
-            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <img src="https://i.pinimg.com/736x/de/3a/94/de3a9491bbdd5aeecd615ff43693236a.jpg" alt="Fern future home vibes" className="w-full h-40 object-cover" />
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
               <h3 className="text-white text-lg font-bold">Fern future home vibes</h3>
             </div>
           </div>
           <div className="relative bg-white rounded-lg shadow-md overflow-hidden">
-            <img src="https://via.placeholder.com/300" alt="My Scandinavian bedroom" className="w-full h-40 object-cover" />
-            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <img src="https://i.pinimg.com/736x/26/53/b2/2653b20371ca8b4b66abf4db327af9c9.jpg" alt="My Scandinavian bedroom" className="w-full h-40 object-cover" />
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
               <h3 className="text-white text-lg font-bold">My Scandinavian bedroom</h3>
             </div>
           </div>
           <div className="relative bg-white rounded-lg shadow-md overflow-hidden">
-            <img src="https://via.placeholder.com/300" alt="The deck of my dreams" className="w-full h-40 object-cover" />
-            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <img src="https://i.pinimg.com/736x/af/1e/8a/af1e8a1b8e02263d5b247b3640764ec2.jpg" alt="The deck of my dreams" className="w-full h-40 object-cover" />
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
               <h3 className="text-white text-lg font-bold">The deck of my dreams</h3>
             </div>
           </div>
           <div className="relative bg-white rounded-lg shadow-md overflow-hidden">
-            <img src="https://via.placeholder.com/300" alt="Serve my drinks in style" className="w-full h-40 object-cover" />
-            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <img src="https://i.pinimg.com/736x/64/a0/2b/64a02ba010363922593a235e1c31e194.jpg" alt="Serve my drinks in style" className="w-full h-40 object-cover" />
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
               <h3 className="text-white text-lg font-bold">Serve my drinks in style</h3>
             </div>
           </div>
           <div className="relative bg-white rounded-lg shadow-md overflow-hidden">
-            <img src="https://via.placeholder.com/300" alt="Our bathroom upgrade" className="w-full h-40 object-cover" />
-            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <img src="https://i.pinimg.com/474x/ce/4b/78/ce4b78b179e87aa0c14f7d7053c06a21.jpg" alt="Our bathroom upgrade" className="w-full h-40 object-cover" />
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
               <h3 className="text-white text-lg font-bold">Our bathroom upgrade</h3>
             </div>
           </div>
