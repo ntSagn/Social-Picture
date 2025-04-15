@@ -1,58 +1,65 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
-import Header from '../components/Header'
+import React, { useState } from 'react';
+import Layout from '../components/Layout';
+import LoginModal from '../components/LoginModal';
+import RegisterModal from '../components/RegisterModal';
 
-function Home() {
+const Home = () => {
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+
+  const openLoginModal = () => {
+    setShowRegisterModal(false);
+    setShowLoginModal(true);
+  };
+
+  const openRegisterModal = () => {
+    setShowLoginModal(false);
+    setShowRegisterModal(true);
+  };
+
   return (
-    <div className="bg-teal-50 min-h-screen pt-12">
-      <Header />
-      <main className="px-6 py-10">
-        <section className="text-center max-w-4xl mx-auto">
-          <h1 className="text-4xl font-bold text-teal-900">Save ideas you like</h1>
-          <p className="text-lg text-teal-700 mt-4">
-            Collect your favorites so you can get back to them later.
-          </p>
-          <Link to="/explore">
-            <button className="mt-6 bg-red-600 text-white px-6 py-3 rounded-3xl hover:bg-red-700 cursor-pointer">
-              Explore
+    <Layout>
+      <div className="container mx-auto py-12 px-4 sm:px-6 lg:px-8">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-gray-800 mb-6">Welcome to our Image Sharing Platform</h1>
+          <p className="text-xl text-gray-600 mb-8">Discover and share beautiful images with the world</p>
+          
+          <div className="flex justify-center space-x-4">
+            <button 
+              onClick={openLoginModal}
+              className="bg-red-600 text-white px-6 py-3 rounded-full hover:bg-red-700 transition-colors"
+            >
+              Log In
             </button>
-          </Link>
-        </section>
-        <section className="mt-12 grid grid-cols-2 md:grid-cols-3 gap-6">
-          <div className="relative bg-white rounded-lg shadow-md overflow-hidden">
-            <img src="https://i.pinimg.com/736x/de/3a/94/de3a9491bbdd5aeecd615ff43693236a.jpg" alt="Fern future home vibes" className="w-full h-40 object-cover" />
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <h3 className="text-white text-lg font-bold">Fern future home vibes</h3>
-            </div>
+            <button 
+              onClick={openRegisterModal}
+              className="bg-gray-200 text-gray-800 px-6 py-3 rounded-full hover:bg-gray-300 transition-colors"
+            >
+              Sign Up
+            </button>
           </div>
-          <div className="relative bg-white rounded-lg shadow-md overflow-hidden">
-            <img src="https://i.pinimg.com/736x/26/53/b2/2653b20371ca8b4b66abf4db327af9c9.jpg" alt="My Scandinavian bedroom" className="w-full h-40 object-cover" />
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <h3 className="text-white text-lg font-bold">My Scandinavian bedroom</h3>
-            </div>
-          </div>
-          <div className="relative bg-white rounded-lg shadow-md overflow-hidden">
-            <img src="https://i.pinimg.com/736x/af/1e/8a/af1e8a1b8e02263d5b247b3640764ec2.jpg" alt="The deck of my dreams" className="w-full h-40 object-cover" />
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <h3 className="text-white text-lg font-bold">The deck of my dreams</h3>
-            </div>
-          </div>
-          <div className="relative bg-white rounded-lg shadow-md overflow-hidden">
-            <img src="https://i.pinimg.com/736x/64/a0/2b/64a02ba010363922593a235e1c31e194.jpg" alt="Serve my drinks in style" className="w-full h-40 object-cover" />
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <h3 className="text-white text-lg font-bold">Serve my drinks in style</h3>
-            </div>
-          </div>
-          <div className="relative bg-white rounded-lg shadow-md overflow-hidden">
-            <img src="https://i.pinimg.com/474x/ce/4b/78/ce4b78b179e87aa0c14f7d7053c06a21.jpg" alt="Our bathroom upgrade" className="w-full h-40 object-cover" />
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <h3 className="text-white text-lg font-bold">Our bathroom upgrade</h3>
-            </div>
-          </div>
-        </section>
-      </main>
-    </div>
-  )
-}
+        </div>
 
-export default Home
+        {/* Featured content for guests */}
+        <div className="mt-16">
+          <h2 className="text-2xl font-semibold text-center mb-8">Featured Images</h2>
+          {/* You could show some public images here */}
+        </div>
+
+        {/* Modals */}
+        <LoginModal 
+          isOpen={showLoginModal} 
+          onClose={() => setShowLoginModal(false)} 
+          onSwitchToRegister={openRegisterModal} 
+        />
+        <RegisterModal 
+          isOpen={showRegisterModal} 
+          onClose={() => setShowRegisterModal(false)} 
+          onSwitchToLogin={openLoginModal} 
+        />
+      </div>
+    </Layout>
+  );
+};
+
+export default Home;

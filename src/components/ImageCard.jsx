@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Heart, Flag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getCurrentUser } from '../services/auth';
+// import { getCurrentUser } from '../services/auth';
 import ReportModal from './ReportModal';
+import { getImageUrl } from '../utils/imageUtils';
 
 function ImageCard({ image, onLike, isLiked = false }) {
   const navigate = useNavigate();
-  const user = getCurrentUser();
+  // const user = getCurrentUser();
   const [showReportModal, setShowReportModal] = useState(false);
   
   const handleImageClick = () => {
@@ -30,6 +31,7 @@ function ImageCard({ image, onLike, isLiked = false }) {
       alert('Please log in to report images');
     }
   };
+  console.log('ImageCard', image, isLiked);
 
   return (
     <>
@@ -38,8 +40,8 @@ function ImageCard({ image, onLike, isLiked = false }) {
         onClick={handleImageClick}
       >
         <img
-          src={image.url || image.imageUrl}
-          alt={image.title || image.caption}
+          src={getImageUrl(image.imageUrl)}
+          alt={image.caption}
           className="w-full rounded-lg shadow-md transition-transform duration-300 group-hover:scale-105"
         />
         

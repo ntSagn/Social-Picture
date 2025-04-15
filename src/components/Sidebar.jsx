@@ -22,17 +22,17 @@ function Sidebar() {
 
   return (
     <>
-      <div className="fixed left-0 top-0 h-full w-16 bg-white shadow-md z-40">
+      <div className="fixed left-0 top-0 h-full w-16 bg-white shadow-md">
         <div className="flex flex-col h-full justify-between">
-          {/* Logo */}
+          {/* Logo
           <div className="p-4">
             <Link to="/">
               <img src="/vite.svg" alt="Logo" className="h-8 mx-auto" />
             </Link>
-          </div>
+          </div> */}
 
           {/* Navigation */}
-          <nav className="flex-1 flex flex-col items-center space-y-6 mt-4">
+          <nav className="flex-1 flex flex-col items-center space-y-6 mt-20">
             {/* Home Button */}
             <Link 
               to="/" 

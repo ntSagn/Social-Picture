@@ -1,0 +1,1552 @@
+API Documentation for SocialPicture
+This document provides details about the endpoints for Auth, CommentLikes, Comments, and Follows services in the SocialPicture application.
+Base: https://localhost:7199/api/
+Table of Contents
+1.	Auth
+2.	CommentLikes
+3.	Comments
+4.	Follows
+5.	Images
+6.	Likes
+7.	Notifications
+8.	Reports
+9.	SavedImages
+10.	Search
+11.	Tags
+12.	Users
+Authentication API
+The Authentication API handles user registration and login.
+Register a New User
+Registers a new user account.
+Endpoint: POST /api/Auth/register
+Request Body:
+{
+  "username": "newuser",
+  "password": "Password123!",
+  "email": "user@example.com",
+  "fullname": "New User"
+}
+cURL Example:
+curl -X POST "https://localhost:5001/api/Auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"newuser","password":"Password123!","email":"user@example.com","fullname":"New User"}'
+Response (200 OK):
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "userId": 123,
+  "username": "newuser",
+  "role": "USER"
+}
+Login
+Authenticates a user and returns a JWT token.
+Endpoint: POST /api/Auth/login
+Request Body:
+{
+  "username": "existinguser",
+  "password": "Password123!"
+}
+cURL Example:
+curl -X POST "https://localhost:5001/api/Auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"existinguser","password":"Password123!"}'
+Response (200 OK):
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "userId": 123,
+  "username": "existinguser",
+  "role": "USER"
+}
+Comment Likes API
+The Comment Likes API manages likes on comments.
+Get Users Who Liked a Comment
+Returns a list of users who liked a specific comment.
+Endpoint: GET /api/CommentLikes/comment/{commentId}
+cURL Example:
+curl -X GET "https://localhost:5001/api/CommentLikes/comment/42"
+Response (200 OK):
+[
+  {
+    "userId": 1,
+    "username": "user1",
+    "email": "user1@example.com",
+    "fullname": "User One",
+    "bio": "Bio for user 1",
+    "profilePicture": "/profiles/user1.jpg",
+    "role": "USER",
+    "createdAt": "2023-05-01T12:00:00Z"
+  },
+  {
+    "userId": 2,
+    "username": "user2",
+    "email": "user2@example.com",
+    "fullname": "User Two",
+    "bio": "Bio for user 2",
+    "profilePicture": "/profiles/user2.jpg",
+    "role": "USER",
+    "createdAt": "2023-05-02T12:00:00Z"
+  }
+]
+Like a Comment
+Adds a like to a comment from the authenticated user.
+Endpoint: POST /api/CommentLikes/comment/{commentId}
+cURL Example:
+curl -X POST "https://localhost:5001/api/CommentLikes/comment/42" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+{
+  "commentLikeId": 123,
+  "userId": 1,
+  "username": "user1",
+  "commentId": 42,
+  "createdAt": "2023-06-20T14:30:00Z"
+}
+Unlike a Comment
+Removes a like from a comment by the authenticated user.
+Endpoint: DELETE /api/CommentLikes/comment/{commentId}
+cURL Example:
+curl -X DELETE "https://localhost:5001/api/CommentLikes/comment/42" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+{
+  "success": true
+}
+Check if User Liked a Comment
+Checks if the authenticated user has liked a specific comment.
+Endpoint: GET /api/CommentLikes/check/{commentId}
+cURL Example:
+curl -X GET "https://localhost:5001/api/CommentLikes/check/42" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+{
+  "isLiked": true
+}
+Get Likes Count for a Comment
+Returns the number of likes for a specific comment.
+Endpoint: GET /api/CommentLikes/count/{commentId}
+cURL Example:
+curl -X GET "https://localhost:5001/api/CommentLikes/count/42"
+Response (200 OK):
+{
+  "count": 42
+}
+Comments API
+The Comments API manages comments on images and replies to comments.
+Get Comments by Image ID
+Returns all comments for a specific image.
+Endpoint: GET /api/Comments/image/{imageId}
+cURL Example:
+curl -X GET "https://localhost:5001/api/Comments/image/123"
+Response (200 OK):
+[
+  {
+    "commentId": 1,
+    "userId": 42,
+    "username": "commenter1",
+    "userProfilePicture": "/profiles/commenter1.jpg",
+    "imageId": 123,
+    "content": "This is an amazing photo!",
+    "parentCommentId": null,
+    "createdAt": "2023-06-15T10:30:00Z",
+    "updatedAt": "2023-06-15T10:30:00Z",
+    "likesCount": 5,
+    "isLikedByCurrentUser": false,
+    "repliesCount": 2,
+    "replies": [
+      {
+        "commentId": 2,
+        "userId": 43,
+        "username": "replier1",
+        "userProfilePicture": "/profiles/replier1.jpg",
+        "imageId": 123,
+        "content": "I agree!",
+        "parentCommentId": 1,
+        "createdAt": "2023-06-15T11:30:00Z",
+        "updatedAt": "2023-06-15T11:30:00Z",
+        "likesCount": 1,
+        "isLikedByCurrentUser": false,
+        "repliesCount": 0,
+        "replies": []
+      }
+    ]
+  }
+]
+Get Comment by ID
+Returns a specific comment by its ID.
+Endpoint: GET /api/Comments/{id}
+cURL Example:
+curl -X GET "https://localhost:5001/api/Comments/42"
+Response (200 OK):
+{
+  "commentId": 42,
+  "userId": 1,
+  "username": "commenter",
+  "userProfilePicture": "/profiles/commenter.jpg",
+  "imageId": 123,
+  "content": "Great composition!",
+  "parentCommentId": null,
+  "createdAt": "2023-06-15T10:30:00Z",
+  "updatedAt": "2023-06-15T10:30:00Z",
+  "likesCount": 7,
+  "isLikedByCurrentUser": true,
+  "repliesCount": 3,
+  "replies": [
+    {
+      "commentId": 43,
+      "userId": 2,
+      "username": "replier",
+      "userProfilePicture": "/profiles/replier.jpg",
+      "imageId": 123,
+      "content": "Thanks!",
+      "parentCommentId": 42,
+      "createdAt": "2023-06-15T11:00:00Z",
+      "updatedAt": "2023-06-15T11:00:00Z",
+      "likesCount": 1,
+      "isLikedByCurrentUser": false,
+      "repliesCount": 0,
+      "replies": []
+    }
+  ]
+}
+Create a Comment
+Creates a new comment or reply.
+Endpoint: POST /api/Comments
+Request Body:
+{
+  "imageId": 123,
+  "content": "This is a beautiful photo!",
+  "parentCommentId": null
+}
+cURL Example:
+curl -X POST "https://localhost:5001/api/Comments" \
+  -H "Authorization: Bearer {your_token}" \
+  -H "Content-Type: application/json" \
+  -d '{"imageId":123,"content":"This is a beautiful photo!","parentCommentId":null}'
+Response (201 Created):
+{
+  "commentId": 44,
+  "userId": 1,
+  "username": "commenter",
+  "userProfilePicture": "/profiles/commenter.jpg",
+  "imageId": 123,
+  "content": "This is a beautiful photo!",
+  "parentCommentId": null,
+  "createdAt": "2023-06-20T15:30:00Z",
+  "updatedAt": "2023-06-20T15:30:00Z",
+  "likesCount": 0,
+  "isLikedByCurrentUser": false,
+  "repliesCount": 0,
+  "replies": []
+}
+Update a Comment
+Updates an existing comment.
+Endpoint: PUT /api/Comments/{id}
+Request Body:
+{
+  "content": "Updated comment text"
+}
+cURL Example:
+curl -X PUT "https://localhost:5001/api/Comments/44" \
+  -H "Authorization: Bearer {your_token}" \
+  -H "Content-Type: application/json" \
+  -d '{"content":"Updated comment text"}'
+Response (200 OK):
+{
+  "commentId": 44,
+  "userId": 1,
+  "username": "commenter",
+  "userProfilePicture": "/profiles/commenter.jpg",
+  "imageId": 123,
+  "content": "Updated comment text",
+  "parentCommentId": null,
+  "createdAt": "2023-06-20T15:30:00Z",
+  "updatedAt": "2023-06-20T15:45:00Z",
+  "likesCount": 0,
+  "isLikedByCurrentUser": false,
+  "repliesCount": 0,
+  "replies": []
+}
+Delete a Comment
+Deletes a comment and its replies.
+Endpoint: DELETE /api/Comments/{id}
+cURL Example:
+curl -X DELETE "https://localhost:5001/api/Comments/44" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+{
+  "success": true
+}
+Get Replies to a Comment
+Returns all replies to a specific comment.
+Endpoint: GET /api/Comments/{commentId}/replies
+cURL Example:
+curl -X GET "https://localhost:5001/api/Comments/42/replies"
+Response (200 OK):
+[
+  {
+    "commentId": 43,
+    "userId": 2,
+    "username": "replier1",
+    "userProfilePicture": "/profiles/replier1.jpg",
+    "imageId": 123,
+    "content": "Great insight!",
+    "parentCommentId": 42,
+    "createdAt": "2023-06-15T11:00:00Z",
+    "updatedAt": "2023-06-15T11:00:00Z",
+    "likesCount": 1,
+    "isLikedByCurrentUser": false,
+    "repliesCount": 0,
+    "replies": []
+  },
+  {
+    "commentId": 45,
+    "userId": 3,
+    "username": "replier2",
+    "userProfilePicture": "/profiles/replier2.jpg",
+    "imageId": 123,
+    "content": "I agree with this!",
+    "parentCommentId": 42,
+    "createdAt": "2023-06-15T12:15:00Z",
+    "updatedAt": "2023-06-15T12:15:00Z",
+    "likesCount": 0,
+    "isLikedByCurrentUser": false,
+    "repliesCount": 0,
+    "replies": []
+  }
+]
+Follows API
+The Follows API manages user following relationships.
+Get Followers by User ID
+Returns all followers for a specific user.
+Endpoint: GET /api/Follows/followers/{userId}
+cURL Example:
+curl -X GET "https://localhost:5001/api/Follows/followers/42"
+Response (200 OK):
+[
+  {
+    "userId": 1,
+    "username": "follower1",
+    "fullname": "Follower One",
+    "profilePicture": "/profiles/follower1.jpg",
+    "isFollowingBack": true,
+    "followSince": "2023-05-10T14:30:00Z"
+  },
+  {
+    "userId": 2,
+    "username": "follower2",
+    "fullname": "Follower Two",
+    "profilePicture": "/profiles/follower2.jpg",
+    "isFollowingBack": false,
+    "followSince": "2023-06-01T09:15:00Z"
+  }
+]
+Get Following by User ID
+Returns all users that a specific user is following.
+Endpoint: GET /api/Follows/following/{userId}
+cURL Example:
+curl -X GET "https://localhost:5001/api/Follows/following/42"
+Response (200 OK):
+[
+  {
+    "userId": 3,
+    "username": "followed1",
+    "fullname": "Followed One",
+    "profilePicture": "/profiles/followed1.jpg",
+    "followSince": "2023-04-15T10:00:00Z"
+  },
+  {
+    "userId": 4,
+    "username": "followed2",
+    "fullname": "Followed Two",
+    "profilePicture": "/profiles/followed2.jpg",
+    "followSince": "2023-05-20T16:45:00Z"
+  }
+]
+Follow a User
+Creates a new follow relationship.
+Endpoint: POST /api/Follows/{followingId}
+cURL Example:
+curl -X POST "https://localhost:5001/api/Follows/42" \
+  -H "Authorization: Bearer {your_token}"
+Response (201 Created):
+{
+  "followerId": 1,
+  "followingId": 42,
+  "createdAt": "2023-06-20T16:30:00Z"
+}
+Unfollow a User
+Removes a follow relationship.
+Endpoint: DELETE /api/Follows/{followingId}
+cURL Example:
+curl -X DELETE "https://localhost:5001/api/Follows/42" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+{
+  "success": true
+}
+Check if Following
+Checks if the authenticated user is following a specific user.
+Endpoint: GET /api/Follows/check/{followingId}
+cURL Example:
+curl -X GET "https://localhost:5001/api/Follows/check/42" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+true
+Get Follow Counts
+Returns the count of followers and following for a specific user.
+Endpoint: GET /api/Follows/counts/{userId}
+cURL Example:
+curl -X GET "https://localhost:5001/api/Follows/counts/42"
+Response (200 OK):
+{
+  "followersCount": 120,
+  "followingCount": 45
+}
+Images API
+The Images API handles image upload, retrieval, updating, and deletion.
+Get All Images
+Returns a paginated list of images with optional filtering.
+Endpoint: GET /api/Images
+Query Parameters:
+•	userId (optional): Filter images by user ID
+•	publicOnly (optional): If true, return only public images (default: true)
+•	page (optional): Page number (default: 1)
+•	pageSize (optional): Items per page (default: 20)
+cURL Example:
+curl -X GET "https://localhost:5001/api/Images?userId=42&publicOnly=true&page=1&pageSize=20"
+Response (200 OK):
+{
+  "page": 1,
+  "pageSize": 20,
+  "totalCount": 45,
+  "items": [
+    {
+      "imageId": 1,
+      "userId": 42,
+      "userName": "photographer",
+      "imageUrl": "/images/photo1.jpg",
+      "caption": "Beautiful sunset",
+      "isPublic": true,
+      "createdAt": "2023-06-15T18:30:00Z",
+      "likesCount": 24,
+      "commentsCount": 5,
+      "isLikedByCurrentUser": false,
+      "isSavedByCurrentUser": false
+    },
+    {
+      "imageId": 2,
+      "userId": 42,
+      "userName": "photographer",
+      "imageUrl": "/images/photo2.jpg",
+      "caption": "City skyline",
+      "isPublic": true,
+      "createdAt": "2023-06-14T12:15:00Z",
+      "likesCount": 18,
+      "commentsCount": 3,
+      "isLikedByCurrentUser": true,
+      "isSavedByCurrentUser": false
+    }
+  ]
+}
+Get Image by ID
+Returns details of a specific image.
+Endpoint: GET /api/Images/{id}
+cURL Example:
+curl -X GET "https://localhost:5001/api/Images/42"
+Response (200 OK):
+{
+  "imageId": 42,
+  "userId": 7,
+  "userName": "naturephotographer",
+  "imageUrl": "/images/forest.jpg",
+  "caption": "Morning fog in the forest",
+  "isPublic": true,
+  "createdAt": "2023-06-10T08:45:00Z",
+  "likesCount": 56,
+  "commentsCount": 12,
+  "isLikedByCurrentUser": true,
+  "isSavedByCurrentUser": false
+}
+Create Image
+Uploads a new image with metadata.
+Endpoint: POST /api/Images
+Request Headers:
+•	Authorization: Bearer {your_token}
+•	Content-Type: multipart/form-data
+Request Form:
+•	Caption (optional): Caption for the image
+•	IsPublic (optional): If true, the image is publicly visible (default: true)
+•	imageFile: The image file to upload
+cURL Example:
+curl -X POST "https://localhost:5001/api/Images" \
+  -H "Authorization: Bearer {your_token}" \
+  -F "Caption=Beautiful mountain view" \
+  -F "IsPublic=true" \
+  -F "imageFile=@/path/to/mountain.jpg"
+Response (201 Created):
+{
+  "imageId": 43,
+  "userId": 1,
+  "userName": "currentuser",
+  "imageUrl": "/images/uploads/mountain123.jpg",
+  "caption": "Beautiful mountain view",
+  "isPublic": true,
+  "createdAt": "2023-06-20T14:30:00Z",
+  "likesCount": 0,
+  "commentsCount": 0,
+  "isLikedByCurrentUser": false,
+  "isSavedByCurrentUser": false
+}
+Update Image
+Updates an existing image's metadata.
+Endpoint: PUT /api/Images/{id}
+Request Headers:
+•	Authorization: Bearer {your_token}
+•	Content-Type: application/json
+Request Body:
+{
+  "caption": "Updated caption for the image",
+  "isPublic": false
+}
+cURL Example:
+curl -X PUT "https://localhost:5001/api/Images/43" \
+  -H "Authorization: Bearer {your_token}" \
+  -H "Content-Type: application/json" \
+  -d '{"caption":"Updated caption for the image","isPublic":false}'
+Response (200 OK):
+{
+  "imageId": 43,
+  "userId": 1,
+  "userName": "currentuser",
+  "imageUrl": "/images/uploads/mountain123.jpg",
+  "caption": "Updated caption for the image",
+  "isPublic": false,
+  "createdAt": "2023-06-20T14:30:00Z",
+  "likesCount": 0,
+  "commentsCount": 0,
+  "isLikedByCurrentUser": false,
+  "isSavedByCurrentUser": false
+}
+Delete Image
+Deletes an image.
+Endpoint: DELETE /api/Images/{id}
+Request Headers:
+•	Authorization: Bearer {your_token}
+cURL Example:
+curl -X DELETE "https://localhost:5001/api/Images/43" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+{
+  "success": true
+}
+Likes API
+The Likes API manages likes on images.
+Get Likes by Image ID
+Returns a list of users who liked a specific image.
+Endpoint: GET /api/Likes/image/{imageId}
+cURL Example:
+curl -X GET "https://localhost:5001/api/Likes/image/42"
+Response (200 OK):
+[
+  {
+    "likeId": 1,
+    "userId": 5,
+    "username": "user1",
+    "imageId": 42,
+    "createdAt": "2023-06-18T14:30:00Z"
+  },
+  {
+    "likeId": 2,
+    "userId": 8,
+    "username": "user2",
+    "imageId": 42,
+    "createdAt": "2023-06-18T15:20:00Z"
+  }
+]
+Like an Image
+Adds a like to an image from the authenticated user.
+Endpoint: POST /api/Likes/image/{imageId}
+Request Headers:
+•	Authorization: Bearer {your_token}
+cURL Example:
+curl -X POST "https://localhost:5001/api/Likes/image/42" \
+  -H "Authorization: Bearer {your_token}"
+Response (201 Created):
+{
+  "likeId": 56,
+  "userId": 1,
+  "username": "currentuser",
+  "imageId": 42,
+  "createdAt": "2023-06-20T16:45:00Z"
+}
+Unlike an Image
+Removes a like from an image by the authenticated user.
+Endpoint: DELETE /api/Likes/image/{imageId}
+Request Headers:
+•	Authorization: Bearer {your_token}
+cURL Example:
+curl -X DELETE "https://localhost:5001/api/Likes/image/42" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+{
+  "success": true
+}
+Check if User Liked an Image
+Checks if the authenticated user has liked a specific image.
+Endpoint: GET /api/Likes/check/{imageId}
+Request Headers:
+•	Authorization: Bearer {your_token}
+cURL Example:
+curl -X GET "https://localhost:5001/api/Likes/check/42" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+true
+Notifications API
+The Notifications API manages user notifications.
+Get Current User's Notifications
+Returns notifications for the authenticated user.
+Endpoint: GET /api/Notifications
+Query Parameters:
+•	unreadOnly (optional): If true, returns only unread notifications (default: false)
+Request Headers:
+•	Authorization: Bearer {your_token}
+cURL Example:
+curl -X GET "https://localhost:5001/api/Notifications?unreadOnly=false" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+[
+  {
+    "notificationId": 1,
+    "userId": 1,
+    "type": "Like",
+    "referenceId": 42,
+    "content": "User photographer liked your photo",
+    "isRead": false,
+    "createdAt": "2023-06-19T12:30:00Z"
+  },
+  {
+    "notificationId": 2,
+    "userId": 1,
+    "type": "Comment",
+    "referenceId": 15,
+    "content": "User commenter commented on your photo: 'Great shot!'",
+    "isRead": true,
+    "createdAt": "2023-06-18T16:45:00Z"
+  }
+]
+Get Notification by ID
+Returns a specific notification by its ID.
+Endpoint: GET /api/Notifications/{id}
+Request Headers:
+•	Authorization: Bearer {your_token}
+cURL Example:
+curl -X GET "https://localhost:5001/api/Notifications/42" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+{
+  "notificationId": 42,
+  "userId": 1,
+  "type": "Follow",
+  "referenceId": 7,
+  "content": "User follower started following you",
+  "isRead": false,
+  "createdAt": "2023-06-19T20:15:00Z"
+}
+Mark Notification as Read
+Marks a specific notification as read.
+Endpoint: PUT /api/Notifications/{id}/read
+Request Headers:
+•	Authorization: Bearer {your_token}
+cURL Example:
+curl -X PUT "https://localhost:5001/api/Notifications/42/read" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+{
+  "success": true
+}
+Mark All Notifications as Read
+Marks all notifications of the current user as read.
+Endpoint: PUT /api/Notifications/mark-all-read
+Request Headers:
+•	Authorization: Bearer {your_token}
+cURL Example:
+curl -X PUT "https://localhost:5001/api/Notifications/mark-all-read" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+{
+  "success": true
+}
+Get Unread Notifications Count
+Returns the count of unread notifications for the current user.
+Endpoint: GET /api/Notifications/unread-count
+Request Headers:
+•	Authorization: Bearer {your_token}
+cURL Example:
+curl -X GET "https://localhost:5001/api/Notifications/unread-count" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+5
+Get Notification Summary
+Returns a summary of notifications for the current user, including unread count and recent notifications.
+Endpoint: GET /api/Notifications/summary
+Request Headers:
+•	Authorization: Bearer {your_token}
+cURL Example:
+curl -X GET "https://localhost:5001/api/Notifications/summary" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+{
+  "unreadCount": 3,
+  "recentNotifications": [
+    {
+      "notificationId": 1,
+      "userId": 1,
+      "type": "Like",
+      "referenceId": 42,
+      "content": "User photographer liked your photo",
+      "isRead": false,
+      "createdAt": "2023-06-19T12:30:00Z"
+    },
+    {
+      "notificationId": 2,
+      "userId": 1,
+      "type": "Comment",
+      "referenceId": 15,
+      "content": "User commenter commented on your photo: 'Great shot!'",
+      "isRead": true,
+      "createdAt": "2023-06-18T16:45:00Z"
+    }
+  ]
+}
+Reports API
+The Reports API manages reports for inappropriate content.
+Get All Reports (Admin/Manager Only)
+Returns all reports, optionally including resolved ones.
+Endpoint: GET /api/Reports
+Query Parameters:
+•	includingResolved (optional): If true, includes resolved reports (default: false)
+Request Headers:
+•	Authorization: Bearer {your_token} (with ADMIN or MANAGER role)
+cURL Example:
+curl -X GET "https://localhost:5001/api/Reports?includingResolved=false" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+[
+  {
+    "reportId": 1,
+    "imageId": 42,
+    "reporterId": 5,
+    "reporterUsername": "reporter",
+    "reason": "Inappropriate content",
+    "description": "This image contains adult content",
+    "status": "Pending",
+    "createdAt": "2023-06-18T14:30:00Z",
+    "resolvedAt": null,
+    "resolvedById": null,
+    "resolverUsername": null,
+    "resolution": null
+  },
+  {
+    "reportId": 2,
+    "imageId": 56,
+    "reporterId": 8,
+    "reporterUsername": "user2",
+    "reason": "Copyright violation",
+    "description": "This image is stolen from my portfolio",
+    "status": "Pending",
+    "createdAt": "2023-06-19T10:15:00Z",
+    "resolvedAt": null,
+    "resolvedById": null,
+    "resolverUsername": null,
+    "resolution": null
+  }
+]
+Get Report by ID (Admin/Manager Only)
+Returns a specific report by its ID.
+Endpoint: GET /api/Reports/{id}
+Request Headers:
+•	Authorization: Bearer {your_token} (with ADMIN or MANAGER role)
+cURL Example:
+curl -X GET "https://localhost:5001/api/Reports/42" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+{
+  "reportId": 42,
+  "imageId": 56,
+  "reporterId": 5,
+  "reporterUsername": "reporter",
+  "reason": "Inappropriate content",
+  "description": "This image contains adult content",
+  "status": "Pending",
+  "createdAt": "2023-06-19T14:30:00Z",
+  "resolvedAt": null,
+  "resolvedById": null,
+  "resolverUsername": null,
+  "resolution": null
+}
+Get Reports by Image ID (Admin/Manager Only)
+Returns all reports for a specific image.
+Endpoint: GET /api/Reports/image/{imageId}
+Request Headers:
+•	Authorization: Bearer {your_token} (with ADMIN or MANAGER role)
+cURL Example:
+curl -X GET "https://localhost:5001/api/Reports/image/56" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+[
+  {
+    "reportId": 42,
+    "imageId": 56,
+    "reporterId": 5,
+    "reporterUsername": "reporter",
+    "reason": "Inappropriate content",
+    "description": "This image contains adult content",
+    "status": "Pending",
+    "createdAt": "2023-06-19T14:30:00Z",
+    "resolvedAt": null,
+    "resolvedById": null,
+    "resolverUsername": null,
+    "resolution": null
+  },
+  {
+    "reportId": 43,
+    "imageId": 56,
+    "reporterId": 8,
+    "reporterUsername": "user2",
+    "reason": "Copyright violation",
+    "description": "This is actually my image",
+    "status": "Pending",
+    "createdAt": "2023-06-19T16:20:00Z",
+    "resolvedAt": null,
+    "resolvedById": null,
+    "resolverUsername": null,
+    "resolution": null
+  }
+]
+Get Current User's Reports
+Returns all reports created by the authenticated user.
+Endpoint: GET /api/Reports/my-reports
+Request Headers:
+•	Authorization: Bearer {your_token}
+cURL Example:
+curl -X GET "https://localhost:5001/api/Reports/my-reports" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+[
+  {
+    "reportId": 7,
+    "imageId": 42,
+    "reporterId": 1,
+    "reporterUsername": "currentuser",
+    "reason": "Inappropriate content",
+    "description": "This image violates community guidelines",
+    "status": "Pending",
+    "createdAt": "2023-06-19T11:45:00Z",
+    "resolvedAt": null,
+    "resolvedById": null,
+    "resolverUsername": null,
+    "resolution": null
+  }
+]
+Create a Report
+Creates a new report for inappropriate content.
+Endpoint: POST /api/Reports
+Request Headers:
+•	Authorization: Bearer {your_token}
+•	Content-Type: application/json
+Request Body:
+{
+  "imageId": 42,
+  "reason": "Inappropriate content",
+  "description": "This image contains offensive material"
+}
+cURL Example:
+curl -X POST "https://localhost:5001/api/Reports" \
+  -H "Authorization: Bearer {your_token}" \
+  -H "Content-Type: application/json" \
+  -d '{"imageId":42,"reason":"Inappropriate content","description":"This image contains offensive material"}'
+Response (201 Created):
+{
+  "reportId": 8,
+  "imageId": 42,
+  "reporterId": 1,
+  "reporterUsername": "currentuser",
+  "reason": "Inappropriate content",
+  "description": "This image contains offensive material",
+  "status": "Pending",
+  "createdAt": "2023-06-20T15:30:00Z",
+  "resolvedAt": null,
+  "resolvedById": null,
+  "resolverUsername": null,
+  "resolution": null
+}
+Resolve a Report (Admin/Manager Only)
+Resolves a report with a resolution.
+Endpoint: PUT /api/Reports/{id}/resolve
+Request Headers:
+•	Authorization: Bearer {your_token} (with ADMIN or MANAGER role)
+•	Content-Type: application/json
+Request Body:
+{
+  "resolution": "Deleted the image for violating community guidelines",
+  "status": "Accepted"
+}
+cURL Example:
+curl -X PUT "https://localhost:5001/api/Reports/8/resolve" \
+  -H "Authorization: Bearer {your_token}" \
+  -H "Content-Type: application/json" \
+  -d '{"resolution":"Deleted the image for violating community guidelines","status":"Accepted"}'
+Response (200 OK):
+{
+  "reportId": 8,
+  "imageId": 42,
+  "reporterId": 1,
+  "reporterUsername": "currentuser",
+  "reason": "Inappropriate content",
+  "description": "This image contains offensive material",
+  "status": "Accepted",
+  "createdAt": "2023-06-20T15:30:00Z",
+  "resolvedAt": "2023-06-20T16:45:00Z",
+  "resolvedById": 2,
+  "resolverUsername": "admin",
+  "resolution": "Deleted the image for violating community guidelines"
+}
+Get Pending Reports Count (Admin/Manager Only)
+Returns the count of pending reports.
+Endpoint: GET /api/Reports/pending-count
+Request Headers:
+•	Authorization: Bearer {your_token} (with ADMIN or MANAGER role)
+cURL Example:
+curl -X GET "https://localhost:5001/api/Reports/pending-count" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+5
+SavedImages API
+The SavedImages API manages saved/bookmarked images for users.
+Get Current User's Saved Images
+Returns all images saved by the authenticated user.
+Endpoint: GET /api/SavedImages
+Request Headers:
+•	Authorization: Bearer {your_token}
+cURL Example:
+Response (200 OK):
+Get Saved Images by User ID
+Returns all images saved by a specific user. Only accessible by the user themselves or an admin.
+Endpoint: GET /api/SavedImages/user/{userId}
+Request Headers:
+•	Authorization: Bearer {your_token}
+cURL Example:
+Response (200 OK):
+Save an Image
+Adds an image to the current user's saved images collection.
+Endpoint: POST /api/SavedImages
+Request Headers:
+•	Authorization: Bearer {your_token}
+•	Content-Type: application/json
+Request Body:
+cURL Example:
+Response (201 Created):
+Unsave an Image
+Removes an image from the current user's saved images collection.
+Endpoint: DELETE /api/SavedImages/{imageId}
+Request Headers:
+•	Authorization: Bearer {your_token}
+cURL Example:
+Response (200 OK):
+Check if User Saved an Image
+Checks if the authenticated user has saved a specific image.
+Endpoint: GET /api/SavedImages/check/{imageId}
+Request Headers:
+•	Authorization: Bearer {your_token}
+cURL Example:
+curl -X GET "https://localhost:5001/api/SavedImages/check/42" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+{
+  "isSaved": true
+}
+Get Paginated Saved Images
+Returns paginated list of the authenticated user's saved images.
+Endpoint: GET /api/SavedImages/paged
+Query Parameters:
+•	page (optional): Page number (default: 1)
+•	pageSize (optional): Items per page (default: 10)
+Request Headers:
+•	Authorization: Bearer {your_token}
+cURL Example:
+curl -X GET "https://localhost:5001/api/SavedImages/paged?page=1&pageSize=10" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+{
+  "page": 1,
+  "pageSize": 10,
+  "totalCount": 25,
+  "totalPages": 3,
+  "items": [
+    {
+      "imageId": 42,
+      "userId": 7,
+      "userName": "photographer",
+      "imageUrl": "/images/sunset.jpg",
+      "caption": "Beautiful sunset over the mountains",
+      "isPublic": true,
+      "createdAt": "2023-06-15T18:30:00Z",
+      "likesCount": 24,
+      "commentsCount": 5,
+      "isLikedByCurrentUser": false,
+      "isSavedByCurrentUser": true
+    },
+    {
+      "imageId": 56,
+      "userId": 12,
+      "userName": "traveler",
+      "imageUrl": "/images/beach.jpg",
+      "caption": "Paradise found",
+      "isPublic": true,
+      "createdAt": "2023-06-12T14:20:00Z",
+      "likesCount": 18,
+      "commentsCount": 3,
+      "isLikedByCurrentUser": true,
+      "isSavedByCurrentUser": true
+    }
+  ]
+}
+Search API
+The Search API provides functionality to search for users and images across the platform.
+Search Images
+Searches for images by caption text or associated tags.
+Endpoint: GET /api/Search/images
+Query Parameters:
+•	query: Search term
+•	page (optional): Page number (default: 1)
+•	pageSize (optional): Items per page (default: 10)
+cURL Example:
+curl -X GET "https://localhost:5001/api/Search/images?query=sunset&page=1&pageSize=10"
+Response (200 OK):
+[
+  {
+    "imageId": 42,
+    "userId": 7,
+    "userName": "photographer",
+    "imageUrl": "/images/sunset.jpg",
+    "caption": "Beautiful sunset over the mountains",
+    "isPublic": true,
+    "createdAt": "2023-06-15T18:30:00Z",
+    "likesCount": 24,
+    "commentsCount": 5,
+    "isLikedByCurrentUser": false,
+    "isSavedByCurrentUser": false
+  },
+  {
+    "imageId": 71,
+    "userId": 18,
+    "userName": "explorer",
+    "imageUrl": "/images/coastal_sunset.jpg",
+    "caption": "Sunset at the coast",
+    "isPublic": true,
+    "createdAt": "2023-06-10T19:15:00Z",
+    "likesCount": 36,
+    "commentsCount": 8,
+    "isLikedByCurrentUser": false,
+    "isSavedByCurrentUser": false
+  }
+]
+Search Users
+Searches for users by username, fullname, or bio.
+Endpoint: GET /api/Search/users
+Query Parameters:
+•	query: Search term
+•	page (optional): Page number (default: 1)
+•	pageSize (optional): Items per page (default: 10)
+cURL Example:
+curl -X GET "https://localhost:5001/api/Search/users?query=photo&page=1&pageSize=10"
+Response (200 OK):
+[
+  {
+    "userId": 7,
+    "username": "photographer",
+    "email": "photographer@example.com",
+    "fullname": "Professional Photographer",
+    "bio": "I love capturing moments through my lens",
+    "profilePicture": "/profiles/photographer.jpg",
+    "followersCount": 156,
+    "followingCount": 42,
+    "postsCount": 87,
+    "role": "USER",
+    "createdAt": "2023-01-15T10:30:00Z"
+  },
+  {
+    "userId": 12,
+    "username": "photolover",
+    "email": "photolover@example.com",
+    "fullname": "Photo Enthusiast",
+    "bio": "Amateur photographer and nature lover",
+    "profilePicture": "/profiles/photolover.jpg",
+    "followersCount": 62,
+    "followingCount": 124,
+    "postsCount": 35,
+    "role": "USER",
+    "createdAt": "2023-02-22T14:45:00Z"
+  }
+]
+Combined Search
+Performs a combined search for both users and images.
+Endpoint: GET /api/Search
+Query Parameters:
+•	query: Search term
+•	limit (optional): Maximum number of results per category (default: 5)
+cURL Example:
+curl -X GET "https://localhost:5001/api/Search?query=nature&limit=5"
+Response (200 OK):
+{
+  "users": [
+    {
+      "userId": 15,
+      "username": "naturelover",
+      "email": "naturelover@example.com",
+      "fullname": "Nature Explorer",
+      "bio": "Passionate about nature photography",
+      "profilePicture": "/profiles/naturelover.jpg",
+      "followersCount": 89,
+      "followingCount": 102,
+      "postsCount": 43,
+      "role": "USER",
+      "createdAt": "2023-03-10T09:15:00Z"
+    }
+  ],
+  "images": [
+    {
+      "imageId": 28,
+      "userId": 15,
+      "userName": "naturelover",
+      "imageUrl": "/images/forest.jpg",
+      "caption": "Morning light in the nature reserve",
+      "isPublic": true,
+      "createdAt": "2023-06-08T07:45:00Z",
+      "likesCount": 68,
+      "commentsCount": 12,
+      "isLikedByCurrentUser": false,
+      "isSavedByCurrentUser": false
+    },
+    {
+      "imageId": 35,
+      "userId": 7,
+      "userName": "photographer",
+      "imageUrl": "/images/waterfall.jpg",
+      "caption": "Hidden waterfall in nature",
+      "isPublic": true,
+      "createdAt": "2023-06-05T16:30:00Z",
+      "likesCount": 92,
+      "commentsCount": 15,
+      "isLikedByCurrentUser": false,
+      "isSavedByCurrentUser": false
+    }
+  ]
+}
+Tags API
+The Tags API manages hashtags associated with images.
+Get All Tags
+Returns a list of all tags in the system.
+Endpoint: GET /api/Tags
+cURL Example:
+curl -X GET "https://localhost:5001/api/Tags"
+Response (200 OK):
+[
+  {
+    "tagId": 1,
+    "name": "nature",
+    "createdAt": "2023-01-10T12:00:00Z",
+    "imagesCount": 87
+  },
+  {
+    "tagId": 2,
+    "name": "travel",
+    "createdAt": "2023-01-12T14:30:00Z",
+    "imagesCount": 65
+  },
+  {
+    "tagId": 3,
+    "name": "portrait",
+    "createdAt": "2023-01-15T09:45:00Z",
+    "imagesCount": 42
+  }
+]
+Get Tag by ID
+Returns details of a specific tag by its ID.
+Endpoint: GET /api/Tags/{id}
+cURL Example:
+curl -X GET "https://localhost:5001/api/Tags/1"
+Response (200 OK):
+{
+  "tagId": 1,
+  "name": "nature",
+  "createdAt": "2023-01-10T12:00:00Z",
+  "imagesCount": 87
+}
+Get Tag by Name
+Returns details of a specific tag by its name.
+Endpoint: GET /api/Tags/name/{name}
+cURL Example:
+curl -X GET "https://localhost:5001/api/Tags/name/nature"
+Response (200 OK):
+{
+  "tagId": 1,
+  "name": "nature",
+  "createdAt": "2023-01-10T12:00:00Z",
+  "imagesCount": 87
+}
+Create a Tag
+Creates a new tag. If the tag already exists, returns the existing tag.
+Endpoint: POST /api/Tags
+Request Headers:
+•	Authorization: Bearer {your_token}
+•	Content-Type: application/json
+Request Body:
+{
+  "name": "wildlife"
+}
+cURL Example:
+curl -X POST "https://localhost:5001/api/Tags" \
+  -H "Authorization: Bearer {your_token}" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"wildlife"}'
+Response (201 Created):
+{
+  "tagId": 4,
+  "name": "wildlife",
+  "createdAt": "2023-06-20T16:45:00Z",
+  "imagesCount": 0
+}
+Delete a Tag
+Deletes a tag from the system. Admin only.
+Endpoint: DELETE /api/Tags/{id}
+Request Headers:
+•	Authorization: Bearer {your_token} (with ADMIN role)
+cURL Example:
+curl -X DELETE "https://localhost:5001/api/Tags/4" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+{
+  "success": true
+}
+Get Images by Tag ID
+Returns images associated with a specific tag ID.
+Endpoint: GET /api/Tags/images/tag/{tagId}
+cURL Example:
+curl -X GET "https://localhost:5001/api/Tags/images/tag/1"
+Response (200 OK):
+[
+  {
+    "imageId": 28,
+    "userId": 15,
+    "userName": "naturelover",
+    "imageUrl": "/images/forest.jpg",
+    "caption": "Morning light in the nature reserve",
+    "isPublic": true,
+    "createdAt": "2023-06-08T07:45:00Z",
+    "likesCount": 68,
+    "commentsCount": 12,
+    "isLikedByCurrentUser": false,
+    "isSavedByCurrentUser": false
+  },
+  {
+    "imageId": 35,
+    "userId": 7,
+    "userName": "photographer",
+    "imageUrl": "/images/waterfall.jpg",
+    "caption": "Hidden waterfall in nature",
+    "isPublic": true,
+    "createdAt": "2023-06-05T16:30:00Z",
+    "likesCount": 92,
+    "commentsCount": 15,
+    "isLikedByCurrentUser": false,
+    "isSavedByCurrentUser": false
+  }
+]
+Get Images by Tag Name
+Returns images associated with a specific tag name.
+Endpoint: GET /api/Tags/images/name/{tagName}
+cURL Example:
+curl -X GET "https://localhost:5001/api/Tags/images/name/nature"
+Response (200 OK):
+[
+  {
+    "imageId": 28,
+    "userId": 15,
+    "userName": "naturelover",
+    "imageUrl": "/images/forest.jpg",
+    "caption": "Morning light in the nature reserve",
+    "isPublic": true,
+    "createdAt": "2023-06-08T07:45:00Z",
+    "likesCount": 68,
+    "commentsCount": 12,
+    "isLikedByCurrentUser": false,
+    "isSavedByCurrentUser": false
+  },
+  {
+    "imageId": 35,
+    "userId": 7,
+    "userName": "photographer",
+    "imageUrl": "/images/waterfall.jpg",
+    "caption": "Hidden waterfall in nature",
+    "isPublic": true,
+    "createdAt": "2023-06-05T16:30:00Z",
+    "likesCount": 92,
+    "commentsCount": 15,
+    "isLikedByCurrentUser": false,
+    "isSavedByCurrentUser": false
+  }
+]
+Add Tag to Image
+Associates a tag with a specific image.
+Endpoint: POST /api/Tags/image/{imageId}/tag/{tagId}
+Request Headers:
+•	Authorization: Bearer {your_token}
+cURL Example:
+curl -X POST "https://localhost:5001/api/Tags/image/28/tag/1" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+{
+  "success": true
+}
+Remove Tag from Image
+Removes a tag association from a specific image.
+Endpoint: DELETE /api/Tags/image/{imageId}/tag/{tagId}
+Request Headers:
+•	Authorization: Bearer {your_token}
+cURL Example:
+curl -X DELETE "https://localhost:5001/api/Tags/image/28/tag/1" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+{
+  "success": true
+}
+Get Tags for Image
+Returns all tags associated with a specific image.
+Endpoint: GET /api/Tags/image/{imageId}
+cURL Example:
+curl -X GET "https://localhost:5001/api/Tags/image/28"
+Response (200 OK):
+[
+  {
+    "tagId": 1,
+    "name": "nature",
+    "createdAt": "2023-01-10T12:00:00Z",
+    "imagesCount": 87
+  },
+  {
+    "tagId": 4,
+    "name": "wildlife",
+    "createdAt": "2023-06-20T16:45:00Z",
+    "imagesCount": 12
+  }
+]
+Get Popular Tags
+Returns the most popular tags based on usage count.
+Endpoint: GET /api/Tags/popular
+Query Parameters:
+•	count (optional): Number of popular tags to return (default: 10)
+cURL Example:
+curl -X GET "https://localhost:5001/api/Tags/popular?count=5"
+Response (200 OK):
+[
+  {
+    "tagId": 1,
+    "name": "nature",
+    "createdAt": "2023-01-10T12:00:00Z",
+    "imagesCount": 87
+  },
+  {
+    "tagId": 2,
+    "name": "travel",
+    "createdAt": "2023-01-12T14:30:00Z",
+    "imagesCount": 65
+  },
+  {
+    "tagId": 5,
+    "name": "landscape",
+    "createdAt": "2023-02-05T11:20:00Z",
+    "imagesCount": 58
+  },
+  {
+    "tagId": 3,
+    "name": "portrait",
+    "createdAt": "2023-01-15T09:45:00Z",
+    "imagesCount": 42
+  },
+  {
+    "tagId": 6,
+    "name": "cityscape",
+    "createdAt": "2023-02-18T16:10:00Z",
+    "imagesCount": 36
+  }
+]
+Users API
+The Users API manages user account operations.
+Get All Users
+Returns a list of all users in the system. Admin only.
+Endpoint: GET /api/Users
+Request Headers:
+•	Authorization: Bearer {your_token} (with ADMIN role)
+cURL Example:
+curl -X GET "https://localhost:5001/api/Users" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+[
+  {
+    "userId": 1,
+    "username": "admin",
+    "email": "admin@example.com",
+    "fullname": "System Administrator",
+    "bio": "I manage this platform",
+    "profilePicture": "/profiles/admin.jpg",
+    "followersCount": 5,
+    "followingCount": 10,
+    "postsCount": 3,
+    "role": "ADMIN",
+    "createdAt": "2023-01-01T12:00:00Z"
+  },
+  {
+    "userId": 2,
+    "username": "moderator",
+    "email": "moderator@example.com",
+    "fullname": "Content Moderator",
+    "bio": "I help keep this platform safe",
+    "profilePicture": "/profiles/moderator.jpg",
+    "followersCount": 12,
+    "followingCount": 8,
+    "postsCount": 5,
+    "role": "MANAGER",
+    "createdAt": "2023-01-02T14:30:00Z"
+  }
+]
+Get User by ID
+Returns details of a specific user by their ID.
+Endpoint: GET /api/Users/{id}
+Request Headers:
+•	Authorization: Bearer {your_token}
+cURL Example:
+curl -X GET "https://localhost:5001/api/Users/7" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+{
+  "userId": 7,
+  "username": "photographer",
+  "email": "photographer@example.com",
+  "fullname": "Professional Photographer",
+  "bio": "I love capturing moments through my lens",
+  "profilePicture": "/profiles/photographer.jpg",
+  "followersCount": 156,
+  "followingCount": 42,
+  "postsCount": 87,
+  "role": "USER",
+  "createdAt": "2023-01-15T10:30:00Z"
+}
+Get User by Username
+Returns details of a specific user by their username.
+Endpoint: GET /api/Users/username/{username}
+Request Headers:
+•	Authorization: Bearer {your_token}
+cURL Example:
+curl -X GET "https://localhost:5001/api/Users/username/photographer" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+{
+  "userId": 7,
+  "username": "photographer",
+  "email": "photographer@example.com",
+  "fullname": "Professional Photographer",
+  "bio": "I love capturing moments through my lens",
+  "profilePicture": "/profiles/photographer.jpg",
+  "followersCount": 156,
+  "followingCount": 42,
+  "postsCount": 87,
+  "role": "USER",
+  "createdAt": "2023-01-15T10:30:00Z"
+}
+Update User Profile
+Updates profile information for a user.
+Endpoint: PUT /api/Users/{id}
+Request Headers:
+•	Authorization: Bearer {your_token}
+•	Content-Type: application/json
+Request Body:
+{
+  "fullname": "Updated Full Name",
+  "bio": "Updated profile bio",
+  "profilePicture": "/profiles/new_image.jpg"
+}
+cURL Example:
+curl -X PUT "https://localhost:5001/api/Users/7" \
+  -H "Authorization: Bearer {your_token}" \
+  -H "Content-Type: application/json" \
+  -d '{"fullname":"Updated Full Name","bio":"Updated profile bio","profilePicture":"/profiles/new_image.jpg"}'
+Response (200 OK):
+{
+  "userId": 7,
+  "username": "photographer",
+  "email": "photographer@example.com",
+  "fullname": "Updated Full Name",
+  "bio": "Updated profile bio",
+  "profilePicture": "/profiles/new_image.jpg",
+  "followersCount": 156,
+  "followingCount": 42,
+  "postsCount": 87,
+  "role": "USER",
+  "createdAt": "2023-01-15T10:30:00Z"
+}
+Change User Password
+Updates a user's password.
+Endpoint: PUT /api/Users/{id}/change-password
+Request Headers:
+•	Authorization: Bearer {your_token}
+•	Content-Type: application/json
+Request Body:
+{
+  "currentPassword": "OldPassword123!",
+  "newPassword": "NewPassword456!"
+}
+cURL Example:
+curl -X PUT "https://localhost:5001/api/Users/7/change-password" \
+  -H "Authorization: Bearer {your_token}" \
+  -H "Content-Type: application/json" \
+  -d '{"currentPassword":"OldPassword123!","newPassword":"NewPassword456!"}'
+Response (200 OK):
+{
+  "success": true
+}
+Delete User
+Deletes a user account from the system. Admin only.
+Endpoint: DELETE /api/Users/{id}
+Request Headers:
+•	Authorization: Bearer {your_token} (with ADMIN role)
+cURL Example:
+curl -X DELETE "https://localhost:5001/api/Users/7" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+{
+  "success": true
+}
+Get Current User
+Returns the profile information for the currently authenticated user.
+Endpoint: GET /api/Users/me
+Request Headers:
+•	Authorization: Bearer {your_token}
+cURL Example:
+curl -X GET "https://localhost:5001/api/Users/me" \
+  -H "Authorization: Bearer {your_token}"
+Response (200 OK):
+{
+  "userId": 1,
+  "username": "currentuser",
+  "email": "user@example.com",
+  "fullname": "Current User",
+  "bio": "This is my profile bio",
+  "profilePicture": "/profiles/user1.jpg",
+  "followersCount": 25,
+  "followingCount": 48,
+  "postsCount": 12,
+  "role": "USER",
+  "createdAt": "2023-02-15T14:20:00Z"
+}
+
+

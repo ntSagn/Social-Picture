@@ -1,91 +1,196 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Header from '../components/Header';
-import Sidebar from '../components/Sidebar';
-import ImageCard from '../components/ImageCard';
-import { getCurrentUser } from '../services/auth';
+import Masonry from 'react-masonry-css';
+import { imagesService } from '../api/imagesService';
+import { likesService } from '../api/likesService';
+import Layout from '../components/Layout';
+import { getImageUrl } from '../utils/imageUtils';
+import { Heart } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { Link, useNavigate } from 'react-router-dom';
 
-function Feed() {
-  const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('Tất cả');
+const Feed = () => {
   const [images, setImages] = useState([]);
-  const [likedImages, setLikedImages] = useState([]);
-  const user = getCurrentUser();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [likedImages, setLikedImages] = useState({});
+  const { currentUser } = useAuth() || { currentUser: null };
+  const navigate = useNavigate();
+
+  // Breakpoints for the masonry layout
+  const breakpointColumnsObj = {
+    default: 5, // Default number of columns
+    1280: 4,    // 4 columns at 1280px
+    1024: 3,    // 3 columns at 1024px
+    768: 2,     // 2 columns at 768px
+    640: 1      // 1 column at 640px and below
+  };
 
   useEffect(() => {
-    // Mock data for images
-    const mockImages = [
-      { id: 1, url: 'https://i.pinimg.com/736x/25/d3/5e/25d35e32569d9797b57ed0bb707dee41.jpg', title: 'Beautiful Sunset', likes: 50, createdAt: '2023-10-01' },
-      { id: 2, url: 'https://i.pinimg.com/736x/64/a0/2b/64a02ba010363922593a235e1c31e194.jpg', title: 'Mountain View', likes: 30, createdAt: '2023-10-02' },
-      { id: 3, url: 'https://i.pinimg.com/736x/26/53/b2/2653b20371ca8b4b66abf4db327af9c9.jpg', title: 'City Lights', likes: 70, createdAt: '2023-10-03' },
-      { id: 4, url: 'https://i.pinimg.com/736x/af/1e/8a/af1e8a1b8e02263d5b247b3640764ec2.jpg', title: 'Forest Path', likes: 20, createdAt: '2023-10-04' },
-    ];
+    const fetchImages = async () => {
+      try {
+        setLoading(true);
+        const response = await imagesService.getAll();
+        setImages(response.data || []);
+        
+        // Initialize liked status if user is logged in
+        if (currentUser && response.data) {
+          const initialLikedState = {};
+          response.data.forEach(img => {
+            initialLikedState[img.imageId] = img.isLikedByCurrentUser || false;
+          });
+          setLikedImages(initialLikedState);
+        }
+        
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching images:', err);
+        setError('Failed to load images. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    if (activeTab === 'Tất cả') {
-      setImages(mockImages);
-    } else if (activeTab === 'Mới Nhất') {
-      setImages([...mockImages].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
-    } else if (activeTab === 'Hot nhất') {
-      setImages([...mockImages].sort((a, b) => b.likes - a.likes));
+    fetchImages();
+  }, [currentUser]);
+
+  const handleLike = async (imageId) => {
+    if (!currentUser) {
+      // Handle not logged in state
+      return;
     }
-  }, [activeTab]);
 
-  const handleSearchChange = (e) => {
-    setSearchQuery(e.target.value);
-  };
+    try {
+      // Toggle like state in UI immediately
+      setLikedImages(prev => ({
+        ...prev,
+        [imageId]: !prev[imageId]
+      }));
 
-  const toggleLike = (imageId) => {
-    setLikedImages((prev) =>
-      prev.includes(imageId) ? prev.filter((id) => id !== imageId) : [...prev, imageId]
-    );
-  };
+      // Update the like count in the images array
+      setImages(prevImages => 
+        prevImages.map(img => 
+          img.imageId === imageId 
+            ? { 
+                ...img, 
+                likesCount: likedImages[imageId] 
+                  ? Math.max(0, img.likesCount - 1) 
+                  : img.likesCount + 1,
+                isLikedByCurrentUser: !likedImages[imageId]
+              } 
+            : img
+        )
+      );
 
-  return (
-    <div className="bg-gray-50 min-h-screen flex">
-      {/* Sidebar for logged in users */}
-      {user && <Sidebar />}
+      // Call API to like/unlike image
+      if (!likedImages[imageId]) {
+        await likesService.like(imageId);
+      } else {
+        await likesService.unlike(imageId);
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error);
+      // Revert UI state on error
+      setLikedImages(prev => ({
+        ...prev,
+        [imageId]: !prev[imageId]
+      }));
       
-      <div className={`${user ? 'ml-16' : ''} w-full`}>
-        {/* Header */}
-        <Header
-          isSearchPage={true}
-          searchQuery={searchQuery}
-          onSearchChange={handleSearchChange}
-        />
-
-        {/* Main Content */}
-        <main className={`pt-20 px-6 ${user ? 'ml-0' : ''}`}>
-          {/* Tabs */}
-          <div className="flex justify-center space-x-6 mb-6">
-            {['Tất cả', 'Mới Nhất', 'Hot nhất'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 rounded-full ${
-                  activeTab === tab ? 'bg-black text-white' : 'bg-gray-200 text-gray-700'
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
+      // Revert the like count in the images array
+      setImages(prevImages => 
+        prevImages.map(img => 
+          img.imageId === imageId 
+            ? { 
+                ...img, 
+                likesCount: likedImages[imageId] 
+                  ? img.likesCount - 1 
+                  : img.likesCount + 1,
+                isLikedByCurrentUser: likedImages[imageId]
+              } 
+            : img
+        )
+      );
+    }
+  };
+  
+  const handleImageClick = (imageId) => {
+    navigate(`/image/${imageId}`);
+  };
+  
+  return (
+    <Layout>
+      <div className="container mx-auto px-4">
+        <h1 className="text-2xl font-bold mb-6">Explore</h1>
+        
+        {error && (
+          <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-6">
+            {error}
           </div>
-
-          {/* Masonry Layout */}
-          <div className="columns-2 md:columns-4 gap-4">
-            {images.map((image) => (
-              <ImageCard
-                key={image.id}
-                image={image}
-                isLiked={likedImages.includes(image.id)}
-                onLike={toggleLike}
-              />
-            ))}
+        )}
+        
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
           </div>
-        </main>
+        ) : (
+          <Masonry
+            breakpointCols={breakpointColumnsObj}
+            className="flex w-full"
+            columnClassName="px-2"
+          >
+            {Array.isArray(images) && images.length > 0 ? (
+              images.map((image) => (
+                <div 
+                  key={image.imageId} 
+                  className="mb-4 relative group overflow-hidden rounded-lg cursor-pointer"
+                  onClick={() => handleImageClick(image.imageId)}
+                >
+                  <img 
+                    src={getImageUrl(image.imageUrl)} 
+                    alt={image.caption || 'Image'}
+                    className="w-full object-cover transition-transform duration-300 group-hover:scale-105" 
+                  />
+                  
+                  {/* Overlay that appears on hover */}
+                  <div className="absolute inset-0 group-hover:bg-black/40 transition-all duration-300 flex flex-col justify-between p-4">
+                    {/* Like button */}
+                    <div className="self-end opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <button 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleLike(image.imageId);
+                        }}
+                        className="p-2 rounded-full bg-white bg-opacity-80 hover:bg-opacity-100 transition-all"
+                      >
+                        <Heart 
+                          className={`${likedImages[image.imageId] ? 'fill-red-500 text-red-500' : 'text-gray-700'}`} 
+                          size={20} 
+                        />
+                      </button>
+                    </div>
+                    
+                    {/* Caption */}
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-white">
+                      <h3 className="font-medium text-lg drop-shadow-md">
+                        {image.caption || 'Untitled'}
+                      </h3>
+                      <p className="text-sm text-gray-200">
+                        By @{image.userName || 'anonymous'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <p className="text-gray-500">No images found</p>
+              </div>
+            )}
+          </Masonry>
+        )}
       </div>
-    </div>
+    </Layout>
   );
-}
+};
 
 export default Feed;

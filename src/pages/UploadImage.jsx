@@ -1,13 +1,16 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Upload, X, Plus, Lock, Globe } from 'lucide-react';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
-import { getCurrentUser } from '../services/auth';
+import { imagesService } from '../api/imagesService';
+import { tagsService } from '../api/tagsService';
+import { useAuth } from '../contexts/AuthContext';
 
 function UploadImage() {
   const navigate = useNavigate();
-  const user = getCurrentUser();
+  const { currentUser } = useAuth();
+  const [selectedFile, setSelectedFile] = useState(null);
   const [imageUrl, setImageUrl] = useState('');
   const [isImageLoading, setIsImageLoading] = useState(false);
   const [caption, setCaption] = useState('');
@@ -17,11 +20,11 @@ function UploadImage() {
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
 
-  // Redirect if not logged in
-  if (!user) {
-    navigate('/');
-    return null;
-  }
+  useEffect(() => {
+    if (!currentUser) {
+      navigate('/login');
+    }
+  }, [currentUser, navigate]);
 
   const handleImageClick = () => {
     fileInputRef.current.click();
@@ -36,11 +39,11 @@ function UploadImage() {
         return;
       }
 
+      setSelectedFile(file);
       setIsImageLoading(true);
       setError('');
 
-      // In a real app, you would upload the file to a server
-      // For demo, we'll create a local URL
+      // Create a preview of the selected image
       const reader = new FileReader();
       reader.onload = (event) => {
         setImageUrl(event.target.result);
@@ -56,6 +59,7 @@ function UploadImage() {
 
   const handleRemoveImage = () => {
     setImageUrl('');
+    setSelectedFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -69,27 +73,89 @@ function UploadImage() {
     }
   };
 
-  const handleRemoveTag = (tagToRemove) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
+  const handleRemoveTag = async (tagId) => {
+    if (!currentUser || !image || currentUser.userId !== image.userId) return;
+    
+    try {
+      await tagsService.removeTagFromImage(imageId, tagId);
+      
+      // Update local state
+      setImageTags(prev => prev.filter(tag => tag.tagId !== tagId));
+    } catch (error) {
+      console.error("Error removing tag:", error);
+    }
   };
 
-  const handleSubmit = (e) => {
+  // In UploadImage.jsx, update the handleSubmit function
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!imageUrl) {
+
+    if (!selectedFile) {
       setError('Please select an image');
       return;
     }
 
-    // In a real app, you would send the data to your API
-    // For demo, we'll just simulate a successful upload
-    setIsImageLoading(true);
-    setTimeout(() => {
-      setIsImageLoading(false);
-      // Redirect to profile page after "upload"
+    try {
+      setIsImageLoading(true);
+
+      // Create FormData object for the API request
+      const formData = new FormData();
+      formData.append('imageFile', selectedFile);
+      formData.append('Caption', caption);
+      formData.append('IsPublic', isPublic);
+
+      // Upload the image using the Images API
+      const response = await imagesService.create(formData);
+      console.log('Image uploaded successfully:', response);
+
+      // Handle tag creation and association for the image
+      if (tags.length > 0) {
+        try {
+          const imageId = response.data.imageId;
+
+          for (const tagName of tags) {
+            // First try to get the tag by name to see if it exists
+            try {
+              const existingTagResponse = await tagsService.getByName(tagName);
+              const tagId = existingTagResponse.data.tagId;
+
+              // If tag exists, associate it with the image
+              await tagsService.addTagToImage(imageId, tagId);
+              console.log(`Added existing tag ${tagName} to image`);
+            } catch (tagError) {
+              if (tagError.response && tagError.response.status === 404) {
+                // Tag doesn't exist, create new tag
+                const newTagResponse = await tagsService.create({ name: tagName });
+                const newTagId = newTagResponse.data.tagId;
+
+                // Associate new tag with the image
+                await tagsService.addTagToImage(imageId, newTagId);
+                console.log(`Created and added new tag ${tagName} to image`);
+              } else {
+                console.error(`Error processing tag ${tagName}:`, tagError);
+              }
+            }
+          }
+        } catch (tagError) {
+          console.error('Error adding tags:', tagError);
+          // Continue even if tag addition fails
+        }
+      }
+
+      // Show success message and redirect
+      alert('Image uploaded successfully!');
       navigate('/profile');
-    }, 1500);
+
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      setError(error.response?.data?.message || 'Failed to upload image. Please try again.');
+    } finally {
+      setIsImageLoading(false);
+    }
   };
+
+  if (!currentUser) return null;
 
   return (
     <div className="bg-gray-50 min-h-screen flex">
@@ -99,7 +165,7 @@ function UploadImage() {
         <main className="pt-20 px-6 py-8">
           <div className="max-w-3xl mx-auto">
             <h1 className="text-2xl font-bold text-center mb-8">Upload your image</h1>
-            
+
             {error && (
               <div className="mb-6 p-3 bg-red-100 text-red-700 rounded-lg">
                 {error}
@@ -108,18 +174,18 @@ function UploadImage() {
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Image Upload Area */}
-              <div 
-                onClick={handleImageClick} 
+              <div
+                onClick={handleImageClick}
                 className={`relative border-2 border-dashed rounded-lg p-4 min-h-[300px] flex flex-col items-center justify-center cursor-pointer ${imageUrl ? 'border-green-500' : 'border-gray-300 hover:border-gray-400'}`}
               >
-                <input 
+                <input
                   type="file"
                   ref={fileInputRef}
                   onChange={handleFileChange}
                   accept="image/*"
                   className="hidden"
                 />
-                
+
                 {isImageLoading ? (
                   <div className="text-center py-12">
                     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900 mx-auto"></div>
@@ -127,9 +193,9 @@ function UploadImage() {
                   </div>
                 ) : imageUrl ? (
                   <div className="relative w-full">
-                    <img 
-                      src={imageUrl} 
-                      alt="Preview" 
+                    <img
+                      src={imageUrl}
+                      alt="Preview"
                       className="mx-auto max-h-[400px] rounded-lg"
                     />
                     <button
@@ -174,8 +240,8 @@ function UploadImage() {
                 </label>
                 <div className="mb-2 flex flex-wrap gap-2">
                   {tags.map((tag, index) => (
-                    <span 
-                      key={index} 
+                    <span
+                      key={index}
                       className="inline-flex items-center gap-1 bg-gray-200 px-2 py-1 rounded-full text-sm"
                     >
                       #{tag}
@@ -218,11 +284,10 @@ function UploadImage() {
                   <button
                     type="button"
                     onClick={() => setIsPublic(true)}
-                    className={`flex items-center px-4 py-2 rounded-lg border ${
-                      isPublic 
-                        ? 'border-red-600 bg-red-50 text-red-600' 
+                    className={`flex items-center px-4 py-2 rounded-lg border ${isPublic
+                        ? 'border-red-600 bg-red-50 text-red-600'
                         : 'border-gray-300 text-gray-700'
-                    }`}
+                      }`}
                   >
                     <Globe size={20} className="mr-2" />
                     Public
@@ -230,19 +295,18 @@ function UploadImage() {
                   <button
                     type="button"
                     onClick={() => setIsPublic(false)}
-                    className={`flex items-center px-4 py-2 rounded-lg border ${
-                      !isPublic 
-                        ? 'border-red-600 bg-red-50 text-red-600' 
+                    className={`flex items-center px-4 py-2 rounded-lg border ${!isPublic
+                        ? 'border-red-600 bg-red-50 text-red-600'
                         : 'border-gray-300 text-gray-700'
-                    }`}
+                      }`}
                   >
                     <Lock size={20} className="mr-2" />
                     Private
                   </button>
                 </div>
                 <p className="mt-1 text-sm text-gray-500">
-                  {isPublic 
-                    ? 'Anyone can see this image' 
+                  {isPublic
+                    ? 'Anyone can see this image'
                     : 'Only you can see this image'}
                 </p>
               </div>

@@ -3,99 +3,299 @@ import { useNavigate } from 'react-router-dom';
 import { Edit, Camera, Users, UserPlus, Grid, Bookmark, Settings, Heart } from 'lucide-react';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
-import { getCurrentUser } from '../services/auth';
+import { imagesService } from '../api/imagesService';
+import { followsService } from '../api/followsService';
+import { usersService } from '../api/usersService';
+import { likesService } from '../api/likesService';
+import { savedImagesService } from '../api/savedImagesService';
+import { getImageUrl } from '../utils/imageUtils';
+import { useAuth } from '../contexts/AuthContext';
+import defaultAvatar from '../assets/default-avatar.png';
 
 function Profile() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('my-images');
   const [isEditing, setIsEditing] = useState(false);
-  const [user, setUser] = useState(getCurrentUser());
+  const { currentUser } = useAuth();
   const [userInfo, setUserInfo] = useState({
-    username: user?.username || '',
-    email: user?.email || '',
-    bio: user?.bio || '',
-    profilePicture: user?.profilePicture || 'https://i.pravatar.cc/150?img=1'
+    username: '',
+    email: '',
+    fullname: '', // Add this field
+    bio: '',
+    profilePicture: ''
   });
+
   const [profileImages, setProfileImages] = useState([]);
   const [savedImages, setSavedImages] = useState([]);
   const [likedImages, setLikedImages] = useState([]);
   const [followers, setFollowers] = useState([]);
   const [following, setFollowing] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [stats, setStats] = useState({
+    imagesCount: 0,
+    followersCount: 0,
+    followingCount: 0
+  });
 
   useEffect(() => {
-    if (!user) {
+    if (!currentUser) {
       navigate('/');
       return;
     }
 
-    // Mock data for user's images
-    const mockImages = [
-      { id: 1, url: 'https://i.pinimg.com/736x/25/d3/5e/25d35e32569d9797b57ed0bb707dee41.jpg', title: 'Beautiful Sunset', likes: 50 },
-      { id: 2, url: 'https://i.pinimg.com/736x/64/a0/2b/64a02ba010363922593a235e1c31e194.jpg', title: 'Mountain View', likes: 30 },
-      { id: 3, url: 'https://i.pinimg.com/736x/26/53/b2/2653b20371ca8b4b66abf4db327af9c9.jpg', title: 'City Lights', likes: 70 }
-    ];
-    setProfileImages(mockImages);
-    
-    // Mock data for saved images
-    const mockSavedImages = [
-      { id: 4, url: 'https://i.pinimg.com/736x/af/1e/8a/af1e8a1b8e02263d5b247b3640764ec2.jpg', title: 'Forest Path', likes: 20 },
-      { id: 5, url: 'https://i.pinimg.com/736x/de/3a/94/de3a9491bbdd5aeecd615ff43693236a.jpg', title: 'Beach Sunset', likes: 45 }
-    ];
-    setSavedImages(mockSavedImages);
-    
-    // Mock data for liked images
-    const mockLikedImages = [
-      { id: 6, url: 'https://i.pinimg.com/736x/ce/4b/78/ce4b78b179e87aa0c14f7d7053c06a21.jpg', title: 'Ocean View', likes: 85 },
-      { id: 7, url: 'https://i.pinimg.com/736x/af/1e/8a/af1e8a1b8e02263d5b247b3640764ec2.jpg', title: 'Forest Trail', likes: 62 },
-      { id: 8, url: 'https://i.pinimg.com/736x/25/d3/5e/25d35e32569d9797b57ed0bb707dee41.jpg', title: 'Mountain Lake', likes: 74 }
-    ];
-    setLikedImages(mockLikedImages);
-    
-    // Mock followers data
-    const mockFollowers = [
-      { id: 11, username: 'john_doe', profilePicture: 'https://i.pravatar.cc/150?img=11' },
-      { id: 12, username: 'nature_lover', profilePicture: 'https://i.pravatar.cc/150?img=12' },
-      { id: 13, username: 'travel_explorer', profilePicture: 'https://i.pravatar.cc/150?img=13' }
-    ];
-    setFollowers(mockFollowers);
-    
-    // Mock following data
-    const mockFollowing = [
-      { id: 21, username: 'art_enthusiast', profilePicture: 'https://i.pravatar.cc/150?img=21' },
-      { id: 22, username: 'photography_pro', profilePicture: 'https://i.pravatar.cc/150?img=22' }
-    ];
-    setFollowing(mockFollowing);
-  }, [user, navigate]);
+    const fetchUserData = async () => {
+      try {
+        setIsLoading(true);
+
+        // Fetch user profile data
+        const userResponse = await usersService.getCurrentUser();
+        const userData = userResponse.data;
+
+        setUserInfo({
+          username: userData.username,
+          email: userData.email,
+          fullname: userData.fullname || '', // Add this field
+          bio: userData.bio || '',
+          profilePicture: userData.profilePicture
+        });
+
+        // Initialize stats with data from user response if available
+        setStats({
+          imagesCount: userData.postsCount || 0,
+          followersCount: userData.followersCount || 0,
+          followingCount: userData.followingCount || 0
+        });
+
+        // Fetch user's images using the filter by userId parameter
+        try {
+          const imagesResponse = await imagesService.getAll({
+            userId: userData.userId,
+            publicOnly: false, // Get both public and private images for the user
+            page: 1,
+            pageSize: 50 // Adjust as needed
+          });
+
+          setProfileImages(imagesResponse.data);
+
+          // Update stats if not available from user data
+          if (!stats.imagesCount) {
+            setStats(prev => ({ ...prev, imagesCount: imagesResponse.data.length }));
+          }
+        } catch (imagesError) {
+          console.error('Error fetching user images:', imagesError);
+          setProfileImages([]);
+        }
+
+        // Fetch saved images if there's an endpoint for this
+        try {
+          const savedResponse = await savedImagesService.getCurrentUserSaved();
+          setSavedImages(savedResponse.data || []);
+        } catch (savedError) {
+          console.error('Error fetching saved images:', savedError);
+          setSavedImages([]);
+        }
+
+        // Fetch liked images from the likes service
+        try {
+          // First get all likes by this user, then get the images
+          const likedImageIds = await likesService.getUserLikedImages(userData.userId);
+          if (likedImageIds && likedImageIds.data) {
+            // If the API returns image details directly, use that
+            setLikedImages(likedImageIds.data);
+          } else {
+            // Otherwise, set empty array
+            setLikedImages([]);
+          }
+        } catch (likedError) {
+          console.error('Error fetching liked images:', likedError);
+          setLikedImages([]);
+        }
+
+        // Fetch followers
+        try {
+          const followersResponse = await followsService.getFollowers(userData.userId);
+          setFollowers(followersResponse.data || []);
+
+          // Update stats if needed
+          if (!stats.followersCount) {
+            setStats(prev => ({ ...prev, followersCount: followersResponse.data?.length || 0 }));
+          }
+        } catch (followersError) {
+          console.error('Error fetching followers:', followersError);
+          setFollowers([]);
+        }
+
+        // Fetch following
+        try {
+          const followingResponse = await followsService.getFollowing(userData.userId);
+          setFollowing(followingResponse.data || []);
+
+          // Update stats if needed
+          if (!stats.followingCount) {
+            setStats(prev => ({ ...prev, followingCount: followingResponse.data?.length || 0 }));
+          }
+        } catch (followingError) {
+          console.error('Error fetching following users:', followingError);
+          setFollowing([]);
+        }
+
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching profile data:', err);
+        setError('Failed to load profile data. Please try again later.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [currentUser, navigate]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setUserInfo({ ...userInfo, [name]: value });
+    console.log(`Field changed: ${name} = "${value}"`);
+    setUserInfo(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // In a real app, you would upload the file to a server
-      // For now, we'll create a local URL
-      const imageUrl = URL.createObjectURL(file);
-      setUserInfo({ ...userInfo, profilePicture: imageUrl });
+  const handleFileInputChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      // Create a FileReader to preview the image
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setUserInfo({
+          ...userInfo,
+          profilePictureFile: e.target.files[0], // Store the file object for later use
+          profilePicturePreview: event.target.result // Create a preview URL
+        });
+      };
+      reader.readAsDataURL(e.target.files[0]);
     }
   };
 
-  const handleSaveChanges = () => {
-    // In a real app, you would make an API call to update the user info
-    // For now, we'll just update the local state
-    const updatedUser = { ...user, ...userInfo };
-    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-    setUser(updatedUser);
-    setIsEditing(false);
+  const handleSaveChanges = async () => {
+    try {
+      // Show loading state
+      setIsLoading(true);
+
+      // First, if there's a new profile picture file, upload it
+      let profilePicturePath = userInfo.profilePicture;
+
+      if (userInfo.profilePictureFile) {
+        // Create a FormData object for the image upload
+        const imageFormData = new FormData();
+        imageFormData.append('imageFile', userInfo.profilePictureFile);
+        imageFormData.append('Caption', 'Update Avatar');
+        imageFormData.append('IsPublic', false);
+
+        // Upload the image using the Images API
+        try {
+          const imageResponse = await imagesService.create(imageFormData);
+
+          // Extract the imageUrl from the response
+          if (imageResponse && imageResponse.data && imageResponse.data.imageUrl) {
+            profilePicturePath = imageResponse.data.imageUrl;
+          }
+        } catch (imageError) {
+          console.error('Error uploading profile picture:', imageError);
+          // Continue with profile update even if image upload fails
+        }
+      }
+
+      // Now update the user profile with all data including the new image path if uploaded
+      const updatedUserData = {};
+
+      // Only include fields that have values to avoid sending undefined or empty values
+      if (userInfo.fullname) updatedUserData.fullname = userInfo.fullname;
+      if (userInfo.bio !== undefined) updatedUserData.bio = userInfo.bio; // Include empty string
+      if (profilePicturePath) updatedUserData.profilePicture = profilePicturePath;
+
+      console.log('Updating profile with data:', updatedUserData);
+
+      // Call the update API
+      const updateResponse = await usersService.update(currentUser.userId, updatedUserData);
+      console.log('Update API response:', updateResponse);
+
+      // Clear the preview URL and file selection
+      if (userInfo.profilePicturePreview) {
+        URL.revokeObjectURL(userInfo.profilePicturePreview);
+        setUserInfo(prev => ({
+          ...prev,
+          profilePictureFile: null,
+          profilePicturePreview: null
+        }));
+      }
+
+      // Exit editing mode
+      setIsEditing(false);
+
+      // Refresh the user data to show updated information
+      const refreshUserResponse = await usersService.getCurrentUser();
+      const refreshedUserData = refreshUserResponse.data;
+      console.log('Refreshed user data:', refreshedUserData);
+
+      setUserInfo({
+        username: refreshedUserData.username,
+        email: refreshedUserData.email,
+        fullname: refreshedUserData.fullname || '',
+        bio: refreshedUserData.bio || '',
+        profilePicture: refreshedUserData.profilePicture
+      });
+
+      // Show success message
+      alert('Profile updated successfully!');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert(`Failed to update profile: ${error.message || 'Please try again.'}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Function to handle image upload from the avatar edit button
+  const handleImageUpload = (e) => {
+    handleFileInputChange(e);
   };
 
   const handleImageClick = (imageId) => {
     navigate(`/image/${imageId}`);
   };
 
-  if (!user) return null;
+  const handleUnfollow = async (userId) => {
+    try {
+      await followsService.unfollow(userId);
+
+      // Update following list by removing the unfollowed user
+      setFollowing(following.filter(user => user.userId !== userId));
+
+      // Update stats
+      setStats(prev => ({
+        ...prev,
+        followingCount: prev.followingCount - 1
+      }));
+    } catch (error) {
+      console.error('Error unfollowing user:', error);
+      alert('Failed to unfollow user. Please try again.');
+    }
+  };
+
+  if (!currentUser) return null;
+
+  if (isLoading) {
+    return (
+      <div className="bg-gray-50 min-h-screen flex">
+        <Sidebar />
+        <div className="ml-16 w-full">
+          <Header />
+          <main className="pt-20 px-6 py-8">
+            <div className="flex justify-center items-center min-h-[60vh]">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gray-50 min-h-screen flex">
@@ -104,14 +304,20 @@ function Profile() {
         <Header />
         <main className="pt-20 px-6 py-8">
           <div className="max-w-6xl mx-auto">
+            {error && (
+              <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-6">
+                {error}
+              </div>
+            )}
+
             {/* Profile Header */}
             <div className="bg-white rounded-xl shadow-md overflow-hidden p-6 mb-8">
               <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-8">
                 {/* Profile Picture */}
                 <div className="relative">
-                  <img 
-                    src={userInfo.profilePicture} 
-                    alt={userInfo.username} 
+                  <img
+                    src={userInfo.profilePicturePreview || getImageUrl(userInfo.profilePicture) || defaultAvatar}
+                    alt={userInfo.username}
                     className="h-32 w-32 rounded-full object-cover"
                   />
                   {isEditing && (
@@ -127,7 +333,7 @@ function Profile() {
                     </label>
                   )}
                 </div>
-                
+
                 {/* User Info */}
                 <div className="flex-1">
                   {isEditing ? (
@@ -139,8 +345,8 @@ function Profile() {
                           id="username"
                           name="username"
                           value={userInfo.username}
-                          onChange={handleInputChange}
-                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500"
+                          readOnly // Username cannot be changed
+                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-gray-100"
                         />
                       </div>
                       <div>
@@ -150,6 +356,17 @@ function Profile() {
                           id="email"
                           name="email"
                           value={userInfo.email}
+                          readOnly // Email cannot be changed in this basic form
+                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-gray-100"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="fullname" className="block text-sm font-medium text-gray-700">Full Name</label>
+                        <input
+                          type="text"
+                          id="fullname"
+                          name="fullname"
+                          value={userInfo.fullname}
                           onChange={handleInputChange}
                           className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500"
                         />
@@ -160,14 +377,17 @@ function Profile() {
                           id="bio"
                           name="bio"
                           rows="3"
-                          value={userInfo.bio}
+                          value={userInfo.Bio}
                           onChange={handleInputChange}
                           className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500"
                         ></textarea>
                       </div>
                       <div className="flex space-x-4">
                         <button
-                          onClick={handleSaveChanges}
+                          onClick={() => {
+                            console.log('Current userInfo before saving:', userInfo);
+                            handleSaveChanges();
+                          }}
                           className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                         >
                           Save Changes
@@ -184,8 +404,9 @@ function Profile() {
                     <>
                       <div className="flex justify-between items-start">
                         <div>
-                          <h2 className="text-2xl font-bold text-gray-900">{user.username}</h2>
-                          <p className="text-gray-600">{user.email}</p>
+                          <h2 className="text-2xl font-bold text-gray-900">{userInfo.fullname}</h2>
+                          <p className="text-gray-600">{userInfo.email}</p>
+                          {/* {userInfo.fullname && <p className="text-gray-800">{userInfo.username}</p>} */}
                           {userInfo.bio && <p className="text-gray-800 mt-2">{userInfo.bio}</p>}
                         </div>
                         <button
@@ -197,19 +418,19 @@ function Profile() {
                         </button>
                       </div>
                       <div className="flex space-x-6 mt-4">
-                        <button 
+                        <button
                           onClick={() => setActiveTab('followers')}
                           className="flex items-center text-gray-700"
                         >
                           <Users size={16} className="mr-1" />
-                          <span>{followers.length} Followers</span>
+                          <span>{stats.followersCount} Followers</span>
                         </button>
-                        <button 
+                        <button
                           onClick={() => setActiveTab('following')}
                           className="flex items-center text-gray-700"
                         >
                           <UserPlus size={16} className="mr-1" />
-                          <span>{following.length} Following</span>
+                          <span>{stats.followingCount} Following</span>
                         </button>
                       </div>
                     </>
@@ -268,17 +489,17 @@ function Profile() {
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                       {profileImages.map((image) => (
                         <div
-                          key={image.id}
+                          key={image.imageId}
                           className="relative group cursor-pointer"
-                          onClick={() => handleImageClick(image.id)}
+                          onClick={() => handleImageClick(image.imageId)}
                         >
                           <img
-                            src={image.url}
-                            alt={image.title}
+                            src={getImageUrl(image.imageUrl)}
+                            alt={image.caption || 'Image'}
                             className="w-full aspect-square object-cover rounded-lg shadow-sm"
                           />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                            <h4 className="text-white text-center font-medium px-2">{image.title}</h4>
+                            <h4 className="text-white text-center font-medium px-2">{image.caption || 'No caption'}</h4>
                           </div>
                         </div>
                       ))}
@@ -297,17 +518,17 @@ function Profile() {
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                       {likedImages.map((image) => (
                         <div
-                          key={image.id}
+                          key={image.imageId}
                           className="relative group cursor-pointer"
-                          onClick={() => handleImageClick(image.id)}
+                          onClick={() => handleImageClick(image.imageId)}
                         >
                           <img
-                            src={image.url}
-                            alt={image.title}
+                            src={getImageUrl(image.imageUrl)}
+                            alt={image.caption || 'Image'}
                             className="w-full aspect-square object-cover rounded-lg shadow-sm"
                           />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                            <h4 className="text-white text-center font-medium px-2">{image.title}</h4>
+                            <h4 className="text-white text-center font-medium px-2">{image.caption || 'No caption'}</h4>
                           </div>
                           <div className="absolute top-2 right-2">
                             <Heart size={20} fill="#ef4444" color="#ef4444" />
@@ -329,17 +550,17 @@ function Profile() {
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                       {savedImages.map((image) => (
                         <div
-                          key={image.id}
+                          key={image.imageId}
                           className="relative group cursor-pointer"
-                          onClick={() => handleImageClick(image.id)}
+                          onClick={() => handleImageClick(image.imageId)}
                         >
                           <img
-                            src={image.url}
-                            alt={image.title}
+                            src={getImageUrl(image.imageUrl)}
+                            alt={image.caption || 'Image'}
                             className="w-full aspect-square object-cover rounded-lg shadow-sm"
                           />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                            <h4 className="text-white text-center font-medium px-2">{image.title}</h4>
+                            <h4 className="text-white text-center font-medium px-2">{image.caption || 'No caption'}</h4>
                           </div>
                         </div>
                       ))}
@@ -357,16 +578,19 @@ function Profile() {
                   {followers.length > 0 ? (
                     <div className="space-y-4">
                       {followers.map((follower) => (
-                        <div key={follower.id} className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm">
+                        <div key={follower.userId} className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm">
                           <div className="flex items-center space-x-4">
                             <img
-                              src={follower.profilePicture}
+                              src={getImageUrl(follower.profilePicture) || defaultAvatar}
                               alt={follower.username}
                               className="h-12 w-12 rounded-full object-cover"
                             />
                             <span className="font-medium">{follower.username}</span>
                           </div>
-                          <button className="px-4 py-1 border border-gray-300 rounded-full text-sm hover:bg-gray-100">
+                          <button
+                            onClick={() => navigate(`/profile/${follower.userId}`)}
+                            className="px-4 py-1 border border-gray-300 rounded-full text-sm hover:bg-gray-100"
+                          >
                             View Profile
                           </button>
                         </div>
@@ -385,16 +609,19 @@ function Profile() {
                   {following.length > 0 ? (
                     <div className="space-y-4">
                       {following.map((follow) => (
-                        <div key={follow.id} className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm">
+                        <div key={follow.userId} className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm">
                           <div className="flex items-center space-x-4">
                             <img
-                              src={follow.profilePicture}
+                              src={getImageUrl(follow.profilePicture) || defaultAvatar}
                               alt={follow.username}
                               className="h-12 w-12 rounded-full object-cover"
                             />
                             <span className="font-medium">{follow.username}</span>
                           </div>
-                          <button className="px-4 py-1 bg-red-100 text-red-600 rounded-full text-sm hover:bg-red-200">
+                          <button
+                            onClick={() => handleUnfollow(follow.userId)}
+                            className="px-4 py-1 bg-red-100 text-red-600 rounded-full text-sm hover:bg-red-200"
+                          >
                             Unfollow
                           </button>
                         </div>
@@ -410,7 +637,7 @@ function Profile() {
               {activeTab === 'settings' && (
                 <div className="bg-white rounded-lg shadow-sm p-6">
                   <h3 className="text-xl font-semibold mb-6">Account Settings</h3>
-                  
+
                   <div className="space-y-6">
                     <div>
                       <h4 className="text-lg font-medium mb-2">Privacy</h4>
@@ -445,13 +672,25 @@ function Profile() {
 
                     <div>
                       <h4 className="text-lg font-medium mb-2">Security</h4>
-                      <button className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
+                      <button
+                        onClick={() => {
+                          console.log('Change password clicked');
+                          // In a real app, you would open a password change modal or navigate to a password change page
+                        }}
+                        className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+                      >
                         Change Password
                       </button>
                     </div>
 
                     <div className="pt-4 border-t border-gray-200">
-                      <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                      <button
+                        onClick={() => {
+                          console.log('Deactivate account clicked');
+                          // In a real app, you would show a confirmation dialog and then call an API
+                        }}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                      >
                         Deactivate Account
                       </button>
                     </div>

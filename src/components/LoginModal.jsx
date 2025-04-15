@@ -1,34 +1,54 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { login } from '../services/auth'
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const navigate = useNavigate()
+  const [credentials, setCredentials] = useState({
+    username: '',
+    password: ''
+  });
+  
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  const { login } = useAuth() || { login: null };
+  const navigate = useNavigate();
 
-  if (!isOpen) return null
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setCredentials(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-    setIsLoading(true)
+    e.preventDefault();
+    if (!login) {
+      setError('Authentication service is not available');
+      return;
+    }
+    
+    setError('');
+    setIsLoading(true);
 
     try {
-      await login(username, password)
-      onClose()
-      // Redirect to feed page after successful login
-      navigate('/')
-      // Force a page refresh to update the UI based on authentication state
-      window.location.reload()
+      await login(credentials);
+      onClose();
+      // The App.jsx routes will handle the redirection
+      navigate('/');
     } catch (err) {
-      setError(err.message)
+      console.error('Login error:', err);
+      setError(
+        err.response?.data?.message || 
+        'Failed to login. Please check your credentials and try again.'
+      );
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
@@ -57,6 +77,7 @@ function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
             {error}
           </div>
         )}
+
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label htmlFor="username" className="block text-sm font-medium text-gray-700">
@@ -65,8 +86,9 @@ function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
             <input
               type="text"
               id="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              name="username"
+              value={credentials.username}
+              onChange={handleChange}
               className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
               placeholder="Username"
               required
@@ -79,8 +101,9 @@ function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
             <input
               type="password"
               id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              name="password"
+              value={credentials.password}
+              onChange={handleChange}
               className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
               placeholder="Password"
               required
@@ -91,6 +114,7 @@ function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
               Forgot your password?
             </a>
           </div>
+
           <button
             type="submit"
             disabled={isLoading}
@@ -103,11 +127,11 @@ function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
         {/* Footer */}
         <div className="text-center mt-6">
           <p className="text-sm text-gray-600">
-            Not on Pinterest yet?{' '}
+            Not on our platform yet?{' '}
             <button
               onClick={() => {
-                onClose()
-                onSwitchToRegister()
+                onClose();
+                onSwitchToRegister();
               }}
               className="text-red-500 hover:underline"
             >
@@ -117,7 +141,7 @@ function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-export default LoginModal
+export default LoginModal;

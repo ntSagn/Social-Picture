@@ -1,65 +1,57 @@
-import React from 'react';
-import { X } from 'lucide-react';
+import React from 'react'
 
-function ReportDetailModal({ report, onClose, onResolve }) {
-  const formatDate = (dateString) => {
-    const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-    return new Date(dateString).toLocaleDateString('en-US', options);
-  };
-
+function ReportDetailModal() {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-white rounded-lg w-full max-w-md p-6 relative">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
-        >
-          <X size={20} />
-        </button>
-
-        <h2 className="text-xl font-bold mb-4">Report Details</h2>
-        
-        <div className="space-y-4">
-          <div>
-            <p className="text-sm font-medium text-gray-500">Reported by</p>
-            <p className="font-medium">{report.reporter.username}</p>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg w-full max-w-md">
+        <h3 className="text-xl font-bold mb-4">Report Image</h3>
+        <form onSubmit={handleReportSubmit}>
+          <div className="mb-4">
+            <label className="block text-gray-700 mb-2">Reason</label>
+            <select
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded"
+              required
+            >
+              <option value="">Select a reason</option>
+              <option value="Inappropriate content">Inappropriate content</option>
+              <option value="Copyright violation">Copyright violation</option>
+              <option value="Harassment">Harassment</option>
+              <option value="Spam">Spam</option>
+              <option value="Other">Other</option>
+            </select>
           </div>
-          
-          <div>
-            <p className="text-sm font-medium text-gray-500">Reason</p>
-            <p className="bg-gray-50 p-3 rounded">{report.reason}</p>
+          <div className="mb-4">
+            <label className="block text-gray-700 mb-2">Description (optional)</label>
+            <textarea
+              value={reportDescription}
+              onChange={(e) => setReportDescription(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded resize-none"
+              rows="3"
+              placeholder="Provide more details about the issue"
+            ></textarea>
           </div>
-          
-          <div>
-            <p className="text-sm font-medium text-gray-500">Report Date</p>
-            <p>{formatDate(report.created_at)}</p>
+          <div className="flex justify-end space-x-2">
+            <button
+              type="button"
+              onClick={() => setShowReportModal(false)}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!reportReason}
+              className="px-4 py-2 bg-red-500 text-white rounded disabled:bg-red-300"
+            >
+              Submit Report
+            </button>
           </div>
-          
-          <div>
-            <p className="text-sm font-medium text-gray-500">Status</p>
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-              report.status === 'resolved' 
-                ? 'bg-green-100 text-green-800' 
-                : 'bg-yellow-100 text-yellow-800'
-            }`}>
-              {report.status.charAt(0).toUpperCase() + report.status.slice(1)}
-            </span>
-          </div>
-          
-          {report.status === 'pending' && (
-            <div className="pt-4 mt-4 border-t border-gray-200">
-              <button
-                onClick={onResolve}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Mark as Resolved
-              </button>
-            </div>
-          )}
-        </div>
+        </form>
       </div>
     </div>
-  );
+  )
 }
 
-export default ReportDetailModal;
+export default ReportDetailModal
