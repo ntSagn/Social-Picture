@@ -1,133 +1,120 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, Search, Eye, CheckCircle, XCircle } from 'lucide-react';
+import { AlertTriangle, Search, Filter, Trash2, Eye, CheckCircle, XCircle } from 'lucide-react';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
-import { getCurrentUser } from '../../services/auth';
-import ReportDetailModal from '../../components/ReportDetailModal';
+import { usersService } from '../../api/usersService';
+import { reportsService } from '../../api/reportsService';
+import { imagesService } from '../../api/imagesService';
 
 function ManagerDashboard() {
   const navigate = useNavigate();
-  const user = getCurrentUser();
   const [reportedImages, setReportedImages] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState('pending');
-  const [selectedReport, setSelectedReport] = useState(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [filterUser, setFilterUser] = useState('');
+  const [filterReportType, setFilterReportType] = useState('');
+  const [users, setUsers] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteReason, setDeleteReason] = useState('');
   const [selectedImage, setSelectedImage] = useState(null);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  // Define report types for filtering
+  const reportTypes = [
+    { value: 'inappropriate', label: 'Inappropriate Content' },
+    { value: 'spam', label: 'Spam' },
+    { value: 'violence', label: 'Violence' },
+    { value: 'copyright', label: 'Copyright Violation' },
+    { value: 'other', label: 'Other' }
+  ];
 
   // Redirect if not manager or admin
   useEffect(() => {
-    if (!user || (user.role !== 'MANAGER' && user.role !== 'ADMIN')) {
-      navigate('/');
-    }
-  }, [user, navigate]);
+    const fetchCurrentUser = async () => {
+      try {
+        const user = await usersService.getCurrentUser();
+        console.log("Current user:", user.data); // Debug user object
+        setCurrentUser(user.data);
 
-  useEffect(() => {
-    // Mock data for reported images
-    const mockReportedImages = [
-      { 
-        id: 4, 
-        url: 'https://i.pinimg.com/736x/af/1e/8a/af1e8a1b8e02263d5b247b3640764ec2.jpg', 
-        caption: 'Forest Path',
-        user: { id: 5, username: 'nature_walks', profilePicture: 'https://i.pravatar.cc/150?img=6' },
-        created_at: '2023-10-18T09:30:00Z',
-        reports: [
-          { 
-            id: 1, 
-            reason: 'Copyright violation', 
-            reporter: { id: 1, username: 'user1' }, 
-            status: 'pending', 
-            created_at: '2023-10-19T11:20:00Z'
-          }
-        ],
-        tags: ['nature', 'forest']
-      },
-      { 
-        id: 5, 
-        url: 'https://i.pinimg.com/736x/de/3a/94/de3a9491bbdd5aeecd615ff43693236a.jpg', 
-        caption: 'Beach Sunset',
-        user: { id: 6, username: 'beach_lover', profilePicture: 'https://i.pravatar.cc/150?img=7' },
-        created_at: '2023-10-19T15:10:00Z',
-        reports: [
-          { 
-            id: 2, 
-            reason: 'Inappropriate content', 
-            reporter: { id: 3, username: 'photo_lover' }, 
-            status: 'pending', 
-            created_at: '2023-10-20T08:45:00Z'
-          },
-          { 
-            id: 3, 
-            reason: 'Violent content', 
-            reporter: { id: 4, username: 'city_explorer' }, 
-            status: 'resolved', 
-            created_at: '2023-10-20T09:30:00Z',
-            resolved_at: '2023-10-21T14:15:00Z',
-            resolved_by: { id: 2, username: 'admin' }
-          }
-        ],
-        tags: ['beach', 'sunset']
+        // Redirect if not manager or admin (role 1 or 2)
+        if (!user || (user.data.role !== 1 && user.data.role !== 2)) {
+          console.log("Not a manager, redirecting. Role:", user?.data.role);
+          navigate('/');
+          return;
+        }
+
+        setAuthChecked(true);
+      } catch (err) {
+        console.error("Error fetching current user:", err);
+        navigate('/');
       }
-    ];
-    
-    setReportedImages(mockReportedImages);
-  }, []);
+    };
 
+    fetchCurrentUser();
+  }, [navigate]);
+
+  // Fetch data from APIs
+  useEffect(() => {
+    if (!authChecked || !currentUser) return;
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch all images
+        const imagesData = await imagesService.getAll();
+        console.log("Images data:", imagesData);
+
+        // Fetch reports
+        const reportsData = await reportsService.getAll();
+        console.log("Reports data:", reportsData);
+
+        // Map reports to images
+        const imagesWithReports = imagesData.data.map(image => {
+          const imageReports = reportsData.data.filter(report => report.imageId === image.imageId);
+          return { ...image, reports: imageReports };
+        });
+
+        // Only get reported images
+        const reported = imagesWithReports.filter(img => img.reports && img.reports.length > 0);
+
+        setReportedImages(reported);
+
+        // Fetch users for filtering
+        // const usersData = await usersService.getAll();
+        // setUsers(usersData.data);
+
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setError(err.message || "Failed to fetch data");
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [authChecked, currentUser]);
+
+  // Filter images based on search, user filter, and report type filter
   const filteredImages = reportedImages.filter(image => {
-    // Search by caption or tag
-    const matchesSearch = searchQuery === '' || 
-      image.caption.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      image.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    // Filter by report status
-    const hasMatchingReports = image.reports.some(report => {
-      return filterStatus === 'all' || report.status === filterStatus;
-    });
-    
-    return matchesSearch && hasMatchingReports;
+    const matchesSearch = searchQuery === '' ||
+      image.caption?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (image.tags && image.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())));
+
+    const matchesUser = filterUser === '' ||
+      (image.user && image.user.username?.toLowerCase() === filterUser.toLowerCase());
+
+    const matchesReportType = filterReportType === '' ||
+      (image.reports && image.reports.some(report => report.type === filterReportType));
+
+    return matchesSearch && matchesUser && matchesReportType;
   });
 
   const handleViewImage = (imageId) => {
     navigate(`/image/${imageId}`);
-  };
-
-  const handleViewReport = (report, image) => {
-    setSelectedReport(report);
-    setSelectedImage(image);
-    setShowDetailModal(true);
-  };
-
-  const handleResolveReport = () => {
-    // In a real app, you would make an API call to resolve the report
-    const updatedReportedImages = reportedImages.map(image => {
-      if (image.id === selectedImage.id) {
-        const updatedReports = image.reports.map(report => {
-          if (report.id === selectedReport.id) {
-            return {
-              ...report,
-              status: 'resolved',
-              resolved_at: new Date().toISOString(),
-              resolved_by: user
-            };
-          }
-          return report;
-        });
-        
-        return {
-          ...image,
-          reports: updatedReports
-        };
-      }
-      return image;
-    });
-    
-    setReportedImages(updatedReportedImages);
-    setShowDetailModal(false);
-    setSelectedReport(null);
-    setSelectedImage(null);
   };
 
   const handleDeleteClick = (image) => {
@@ -135,16 +122,128 @@ function ManagerDashboard() {
     setShowDeleteModal(true);
   };
 
-  const handleDeleteConfirm = () => {
-    if (selectedImage && deleteReason) {
-      // In a real app, you would make an API call to delete the image
-      setReportedImages(reportedImages.filter(img => img.id !== selectedImage.id));
-      setShowDeleteModal(false);
-      setSelectedImage(null);
-      setDeleteReason('');
+  const handleResolveReport = async (image, reportId) => {
+    try {
+      // Prompt the user for a resolution comment
+      const resolutionComment = prompt("Please enter a resolution comment:", "Content reviewed and complies with community guidelines.");
       
-      // In a real app, you would also send a notification to the user
-      alert(`Image deleted. Notification sent to ${selectedImage.user.username} with reason: ${deleteReason}`);
+      // If user cancels the prompt, abort the resolution
+      if (resolutionComment === null) return;
+      
+      // Prepare the resolution payload
+      const resolutionData = {
+        status: 1,  // 1 means "resolved"
+        resolutionComment: resolutionComment
+      };
+      
+      // Call the API to resolve the report
+      await reportsService.resolveReport(reportId, resolutionData);
+      
+      // Update local state
+      const updatedReportedImages = reportedImages.map(img => {
+        if (img.imageId === image.imageId) {
+          // Remove the resolved report from the image
+          return {
+            ...img,
+            reports: img.reports.filter(report => report.id !== reportId)
+          };
+        }
+        return img;
+      });
+      
+      // Remove images with no reports from reportedImages
+      const filteredReportedImages = updatedReportedImages.filter(
+        img => img.reports && img.reports.length > 0
+      );
+      
+      // Update the reportedImages state
+      setReportedImages(filteredReportedImages);
+      
+      // Show success notification
+      alert("Report has been successfully resolved");
+    } catch (err) {
+      console.error("Error resolving report:", err);
+      alert(err.message || "Failed to resolve the report");
+    }
+  };
+
+  const handleResolveAllReports = async (image) => {
+    try {
+      // Check if the image has any reports
+      if (!image.reports || image.reports.length === 0) {
+        alert("No reports found for this image");
+        return;
+      }
+
+      // Call the API to resolve all reports for this image
+      await Promise.all(image.reports.map(report =>
+        reportsService.resolveReport(report.id || report.reportId)
+      ));
+
+      // Update the reported images list by removing the image
+      setReportedImages(reportedImages.filter(img =>
+        (img.id || img.imageId) !== (image.id || image.imageId)
+      ));
+
+      // Show success notification
+      alert("All reports for this image have been resolved");
+    } catch (err) {
+      console.error("Error resolving reports:", err);
+      alert(err.message || "Failed to resolve reports");
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (selectedImage && deleteReason) {
+      try {
+        // Call the API to delete the image
+        await imagesService.delete(selectedImage.id || selectedImage.imageId, deleteReason);
+
+        // Update local state
+        setReportedImages(reportedImages.filter(img =>
+          (img.id || img.imageId) !== (selectedImage.id || selectedImage.imageId)
+        ));
+
+        // Show success notification
+        alert(`Image deleted successfully. User ${selectedImage.user.username} has been notified.`);
+
+        // Close modal and reset state
+        setShowDeleteModal(false);
+        setSelectedImage(null);
+        setDeleteReason('');
+      } catch (err) {
+        console.error("Error deleting image:", err);
+        alert(err.message || "Failed to delete image");
+      }
+    }
+  };
+
+  const handleDismissReport = async (image, reportId) => {
+    try {
+      // Call API to dismiss report
+      await reportsService.dismissReport(reportId);
+
+      // Update local state - remove this report from the image
+      const updatedReportedImages = reportedImages.map(img => {
+        if ((img.id || img.imageId) === (image.id || image.imageId)) {
+          return {
+            ...img,
+            reports: img.reports.filter(report => report.id !== reportId)
+          };
+        }
+        return img;
+      });
+
+      // Remove images that no longer have reports
+      const filtered = updatedReportedImages.filter(img => img.reports && img.reports.length > 0);
+
+      setReportedImages(filtered);
+
+      // Show success notification
+      alert("Report dismissed successfully");
+    } catch (err) {
+      console.error("Error dismissing report:", err);
+      alert(err.message || "Failed to dismiss report");
     }
   };
 
@@ -153,7 +252,15 @@ function ManagerDashboard() {
     return new Date(dateString).toLocaleDateString('en-US', options);
   };
 
-  if (!user || (user.role !== 'MANAGER' && user.role !== 'ADMIN')) return null;
+  // Show loading state while checking authentication
+  if (!authChecked || !currentUser) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4 border-t-blue-500 animate-spin"></div>
+        <p className="ml-3">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gray-100 min-h-screen flex">
@@ -165,7 +272,7 @@ function ManagerDashboard() {
             <div className="flex justify-between items-center mb-6">
               <h1 className="text-2xl font-bold text-gray-900">Report Management</h1>
               <div className="text-sm text-gray-600 bg-gray-200 px-3 py-1 rounded-full">
-                Logged in as {user.role}
+                Logged in as Manager
               </div>
             </div>
 
@@ -184,157 +291,195 @@ function ManagerDashboard() {
                     />
                   </div>
                 </div>
-                <div>
+                <div className="flex flex-col md:flex-row gap-2">
                   <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
+                    value={filterReportType}
+                    onChange={(e) => setFilterReportType(e.target.value)}
                     className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="all">All Reports</option>
-                    <option value="pending">Pending</option>
-                    <option value="resolved">Resolved</option>
+                    <option value="">All Report Types</option>
+                    {reportTypes.map(type => (
+                      <option key={type.value} value={type.value}>{type.label}</option>
+                    ))}
                   </select>
                 </div>
               </div>
             </div>
 
             {/* Content */}
-            <div className="overflow-x-auto">
-              <table className="min-w-full bg-white rounded-lg overflow-hidden shadow-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Caption</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Uploader</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reports</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {filteredImages.length > 0 ? (
-                    filteredImages.map((image) => (
-                      <tr key={image.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="h-16 w-16 rounded overflow-hidden">
-                            <img 
-                              src={image.url} 
-                              alt={image.caption} 
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900">{image.caption}</div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {image.tags.map(tag => (
-                              <span key={tag} className="inline-block bg-gray-100 px-2 py-0.5 rounded-full mr-1">
-                                #{tag}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="h-8 w-8 rounded-full overflow-hidden">
-                              <img 
-                                src={image.user.profilePicture} 
-                                alt={image.user.username}
+            {loading ? (
+              <div className="flex justify-center items-center py-10">
+                <div className="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4 border-t-blue-500 animate-spin"></div>
+              </div>
+            ) : error ? (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                <strong className="font-bold">Error: </strong>
+                <span className="block sm:inline">{error}</span>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
+                  <h2 className="text-lg font-semibold mb-2">Reported Images</h2>
+                  <p className="text-gray-600">
+                    {reportedImages.length} image{reportedImages.length !== 1 ? 's' : ''} with reports requiring review
+                  </p>
+                </div>
+
+                <table className="min-w-full bg-white rounded-lg overflow-hidden shadow-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Caption</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Report Details</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {filteredImages.length > 0 ? (
+                      filteredImages.map((image) => (
+                        <tr key={image.id || image.imageId} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="h-16 w-16 rounded overflow-hidden">
+                              <img
+                                src={image.url || image.imageUrl}
+                                alt={image.caption}
                                 className="h-full w-full object-cover"
                               />
                             </div>
-                            <div className="ml-2 text-sm text-gray-900">{image.user.username}</div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="space-y-2">
-                            {image.reports.map(report => (
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-gray-900">{image.caption}</div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {image.tags && image.tags.map(tag => (
+                                <span key={tag} className="inline-block bg-gray-100 px-2 py-0.5 rounded-full mr-1">
+                                  #{tag}
+                                </span>
+                              ))}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              Posted: {formatDate(image.created_at)}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="h-8 w-8 rounded-full overflow-hidden">
+                                <img
+                                  src={image.userProfilePicture}
+                                  alt={image.user?.username}
+                                  className="h-full w-full object-cover"
+                                  onError={(e) => {
+                                    e.target.onerror = null;
+                                    e.target.src = 'https://i.pravatar.cc/150?img=1'; // Fallback image
+                                  }}
+                                />
+                              </div>
+                              <div className="ml-2 text-sm text-gray-900">{image.user?.username}</div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="space-y-2">
+                              {image.reports && image.reports.map(report => (
+                                <div key={report.reportId} className="bg-gray-50 p-2 rounded text-sm">
+                                  <div className="flex items-center">
+                                    <AlertTriangle size={14} className="text-red-500 mr-1" />
+                                    <span className="font-medium">{reportTypes.find(t => t.value === report.type)?.label || report.type}</span>
+                                    <span className="ml-auto text-xs text-gray-500">{formatDate(report.createdAt)}</span>
+                                  </div>
+                                  <p className="text-gray-700 mt-1">{report.reason}</p>
+                                  <div className="mt-1 text-xs text-gray-600">
+                                    Reported by: {report.reporterUsername || 'Anonymous'}
+                                  </div>
+                                  <div className="mt-1 flex justify-end">
+                                    <button
+                                      onClick={() => handleResolveReport(image, report.reportId)}
+                                      className="text-green-600 hover:text-green-800 text-xs flex items-center"
+                                    >
+                                      <CheckCircle size={14} className="mr-1" />
+                                      Resolve
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <div className="flex flex-col space-y-2">
                               <button
-                                key={report.id}
-                                onClick={() => handleViewReport(report, image)}
-                                className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium w-full ${
-                                  report.status === 'pending'
-                                    ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                                    : 'bg-green-100 text-green-800 hover:bg-green-200'
-                                }`}
+                                onClick={() => handleViewImage(image.id || image.imageId)}
+                                className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 flex items-center"
+                                title="View image"
                               >
-                                {report.status === 'pending' ? (
-                                  <AlertTriangle size={12} className="mr-1" />
-                                ) : (
-                                  <CheckCircle size={12} className="mr-1" />
-                                )}
-                                {report.reason.slice(0, 20)}{report.reason.length > 20 ? '...' : ''}
+                                <Eye size={16} className="mr-1" />
+                                View
                               </button>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <div className="flex space-x-2">
-                            <button 
-                              onClick={() => handleViewImage(image.id)}
-                              className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
-                              title="View image"
-                            >
-                              <Eye size={18} />
-                            </button>
-                            {image.reports.some(report => report.status === 'pending') && (
                               <button
                                 onClick={() => handleDeleteClick(image)}
-                                className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
-                                title="Delete reported image"
+                                className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 flex items-center"
+                                title="Delete image"
                               >
-                                <XCircle size={18} />
+                                <Trash2 size={16} className="mr-1" />
+                                Delete
                               </button>
-                            )}
-                          </div>
+                              <button
+                                onClick={() => handleResolveAllReports(image)}
+                                className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 flex items-center"
+                                title="Resolve all reports"
+                              >
+                                <CheckCircle size={16} className="mr-1" />
+                                Resolve All
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                          No reported images found matching your criteria
                         </td>
                       </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
-                        No reported images found matching your criteria
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </main>
       </div>
-
-      {/* Report Detail Modal */}
-      {showDetailModal && selectedReport && (
-        <ReportDetailModal
-          report={selectedReport}
-          onClose={() => {
-            setShowDetailModal(false);
-            setSelectedReport(null);
-            setSelectedImage(null);
-          }}
-          onResolve={handleResolveReport}
-        />
-      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && selectedImage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
           <div className="bg-white rounded-lg w-full max-w-md p-6 relative">
             <h2 className="text-xl font-bold text-center mb-4">Confirm Image Deletion</h2>
-            
+
             <div className="mb-4 flex items-center justify-center">
-              <img 
-                src={selectedImage.url} 
-                alt={selectedImage.caption} 
+              <img
+                src={selectedImage.url || selectedImage.imageUrl}
+                alt={selectedImage.caption}
                 className="h-32 rounded shadow-sm"
               />
             </div>
-            
+
+            <div className="mb-4 bg-yellow-50 p-3 rounded border border-yellow-200">
+              <p className="text-gray-700 mb-2">
+                <b>Reports:</b>
+              </p>
+              <ul className="list-disc pl-5 space-y-1">
+                {selectedImage.reports && selectedImage.reports.map(report => (
+                  <li key={report.id} className="text-sm">
+                    <span className="font-medium">{reportTypes.find(t => t.value === report.type)?.label || report.type}:</span> {report.reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
             <p className="mb-4 text-gray-700">
-              You are about to delete a reported image uploaded by <b>{selectedImage.user.username}</b>. 
+              You are about to delete an image uploaded by <b>{selectedImage.user?.username}</b>.
               This action cannot be undone.
             </p>
-            
+
             <div className="mb-4">
               <label htmlFor="deleteReason" className="block text-sm font-medium text-gray-700 mb-1">
                 Reason for deletion (will be sent to user):
@@ -349,7 +494,7 @@ function ManagerDashboard() {
                 required
               ></textarea>
             </div>
-            
+
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => {

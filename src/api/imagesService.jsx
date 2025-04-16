@@ -32,7 +32,17 @@ export const imagesService = {
   update: (imageId, imageData) => apiClient.put(`/Images/${imageId}`, imageData),
   
   // Delete an image
-  delete: (imageId) => apiClient.delete(`/Images/${imageId}`),
+  delete: async (imageId) => {
+    try {
+      console.log(`Attempting to delete image with ID: ${imageId}`);
+      const response = await apiClient.delete(`/Images/${imageId}`);
+      console.log('Delete successful, response:', response);
+      return response;
+    } catch (error) {
+      console.error(`Error deleting image ${imageId}:`, error.response || error);
+      throw error;
+    }
+  },
 };
 
 export default imagesService;

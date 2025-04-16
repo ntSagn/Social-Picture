@@ -36,6 +36,7 @@ const ImageDetail = () => {
   const [reportReason, setReportReason] = useState('');
   const [reportDescription, setReportDescription] = useState('');
   const [editMenuOpen, setEditMenuOpen] = useState(false);
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
 
   const menuRef = useRef(null);
 
@@ -137,6 +138,20 @@ const ImageDetail = () => {
       alert('Image updated successfully');
     } catch (error) {
       console.error("Error updating image:", error);
+    }
+  };
+
+  // Add this with your other handler functions
+  const handleDeleteImage = async () => {
+    try {
+      await imagesService.delete(parseInt(imageId));
+      // Show success message
+      alert('Image deleted successfully');
+      // Redirect to user profile after deletion
+      navigate(`/profile`);
+    } catch (error) {
+      console.error("Error deleting image:", error);
+      alert(error);
     }
   };
 
@@ -406,15 +421,26 @@ const ImageDetail = () => {
                     >
                       {/* Only show edit option for image owner */}
                       {currentUser && currentUser.userId === image.userId && (
-                        <button
-                          onClick={() => {
-                            setIsEditing(true);
-                            setEditMenuOpen(false);
-                          }}
-                          className="block px-4 py-2 text-gray-800 hover:bg-gray-100 w-full text-left"
-                        >
-                          Edit
-                        </button>
+                        <>
+                          <button
+                            onClick={() => {
+                              setIsEditing(true);
+                              setEditMenuOpen(false);
+                            }}
+                            className="block px-4 py-2 text-gray-800 hover:bg-gray-100 w-full text-left"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => {
+                              setShowDeleteConfirmModal(true);
+                              setEditMenuOpen(false);
+                            }}
+                            className="block px-4 py-2 text-red-600 hover:bg-red-50 w-full text-left"
+                          >
+                            Delete
+                          </button>
+                        </>
                       )}
 
                       <button
@@ -498,8 +524,8 @@ const ImageDetail = () => {
                         type="button"
                         onClick={() => setIsPublic(true)}
                         className={`flex items-center space-x-2 px-3 py-2 rounded-md ${isPublic
-                            ? 'bg-red-100 text-red-700 border border-red-300'
-                            : 'bg-gray-100 text-gray-700 border border-gray-200'
+                          ? 'bg-red-100 text-red-700 border border-red-300'
+                          : 'bg-gray-100 text-gray-700 border border-gray-200'
                           }`}
                       >
                         <Globe size={16} />
@@ -510,8 +536,8 @@ const ImageDetail = () => {
                         type="button"
                         onClick={() => setIsPublic(false)}
                         className={`flex items-center space-x-2 px-3 py-2 rounded-md ${!isPublic
-                            ? 'bg-red-100 text-red-700 border border-red-300'
-                            : 'bg-gray-100 text-gray-700 border border-gray-200'
+                          ? 'bg-red-100 text-red-700 border border-red-300'
+                          : 'bg-gray-100 text-gray-700 border border-gray-200'
                           }`}
                       >
                         <Lock size={16} />
@@ -646,6 +672,40 @@ const ImageDetail = () => {
           reportDescription={reportDescription}
           setReportDescription={setReportDescription}
         />
+      )}
+      {showDeleteConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-white rounded-lg w-full max-w-md p-6 relative">
+            <h2 className="text-xl font-bold text-center mb-4">Confirm Image Deletion</h2>
+
+            <div className="mb-4 flex items-center justify-center">
+              <img
+                src={getImageUrl(image.imageUrl)}
+                alt={image.caption}
+                className="h-32 rounded shadow-sm"
+              />
+            </div>
+
+            <p className="mb-6 text-gray-700 text-center">
+              Are you sure you want to delete this image? This action cannot be undone.
+            </p>
+
+            <div className="flex justify-center space-x-3">
+              <button
+                onClick={() => setShowDeleteConfirmModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteImage}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Delete Image
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </Layout>
   );

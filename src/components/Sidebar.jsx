@@ -1,14 +1,33 @@
-import React, { useState } from 'react'
-import { Home, Upload, Bell, Settings, User, Shield } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Home, Upload, Bell, Settings, User, Shield, BarChart, UserPlus, FileText } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import NotificationPanel from './NotificationPanel'
-import { getCurrentUser } from '../services/auth'
+import { usersService } from '../api/usersService'
 
 function Sidebar() {
   const location = useLocation()
   const path = location.pathname
   const [isNotificationPanelOpen, setNotificationPanelOpen] = useState(false)
-  const user = getCurrentUser()
+  // Replace direct call with state and effect
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+  
+  // Fetch current user data asynchronously
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const userData = await usersService.getCurrentUser();
+        console.log("Sidebar user data:", userData);
+        setUser(userData.data || userData);
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching user in sidebar:", err);
+        setLoading(false);
+      }
+    };
+    
+    fetchUser();
+  }, []);
   
   const isActive = (route) => {
     if (route === '/' && path === '/') return true;
@@ -17,8 +36,51 @@ function Sidebar() {
     if (route === '/profile' && path.startsWith('/profile')) return true;
     if (route === '/admin' && path === '/admin') return true;
     if (route === '/manage-reports' && path === '/manage-reports') return true;
+    if (route === '/user-management' && path === '/user-management') return true;
+    if (route === '/content-stats' && path === '/content-stats') return true;
+    if (route === '/audit-logs' && path === '/audit-logs') return true;
     return false;
   };
+
+  // Helper function to check user roles consistently
+  const hasRole = (requiredRole) => {
+    if (!user) return false;
+    
+    if (requiredRole === 'ADMIN') return user.role === 2;
+    if (requiredRole === 'MANAGER') return user.role === 1;
+    if (requiredRole === 'USER') return user.role === 0 || user.role === 1 || user.role === 2;
+    
+    return false;
+  };
+
+  // Show simplified sidebar while loading
+  if (loading) {
+    return (
+      <div className="fixed left-0 top-0 h-full w-16 bg-white shadow-md">
+        <div className="flex flex-col h-full justify-center items-center">
+          <div className="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-8 w-8 mb-4 border-t-blue-500 animate-spin"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // If no user, show limited sidebar
+  if (!user) {
+    return (
+      <div className="fixed left-0 top-0 h-full w-16 bg-white shadow-md">
+        <div className="flex flex-col h-full justify-between">
+          <nav className="flex-1 flex flex-col items-center space-y-6 mt-20">
+            <Link 
+              to="/" 
+              className="relative w-full flex justify-center py-3 text-gray-700 hover:text-black hover:bg-gray-100"
+            >
+              <Home size={24} />
+            </Link>
+          </nav>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -81,35 +143,56 @@ function Sidebar() {
               ) : (
                 <>
                   <Bell size={24} />
-                  {/* Optional: Add a notification indicator dot */}
                   <span className="absolute top-3 right-3 h-2 w-2 bg-red-600 rounded-full"></span>
                 </>
               )}
             </button>
             
-            {/* Admin Dashboard Button - visible only to admins */}
-            {user && user.role === 'ADMIN' && (
-              <Link 
-                to="/admin" 
-                className={`relative w-full flex justify-center py-3 transition-colors duration-200 ${
-                  isActive('/admin') 
-                    ? 'text-black' 
-                    : 'text-gray-700 hover:text-black hover:bg-gray-100'
-                }`}
-              >
-                {isActive('/admin') ? (
-                  <>
-                    <span className="absolute left-0 top-0 bottom-0 w-1 bg-red-600 rounded-r-full"></span>
-                    <Shield size={24} className="transition-transform duration-200 transform scale-110" />
-                  </>
-                ) : (
-                  <Shield size={24} />
-                )}
-              </Link>
+            {/* ---------- ADMIN SECTION ---------- */}
+            {hasRole('ADMIN') && (
+              <>
+                {/* Admin Dashboard Button */}
+                <Link 
+                  to="/admin" 
+                  className={`relative w-full flex justify-center py-3 transition-colors duration-200 ${
+                    isActive('/admin') 
+                      ? 'text-black' 
+                      : 'text-gray-700 hover:text-black hover:bg-gray-100'
+                  }`}
+                >
+                  {isActive('/admin') ? (
+                    <>
+                      <span className="absolute left-0 top-0 bottom-0 w-1 bg-red-600 rounded-r-full"></span>
+                      <Shield size={24} className="transition-transform duration-200 transform scale-110" />
+                    </>
+                  ) : (
+                    <Shield size={24} />
+                  )}
+                </Link>
+
+                {/* User Management Button - Admin only */}
+                <Link 
+                  to="/user-management" 
+                  className={`relative w-full flex justify-center py-3 transition-colors duration-200 ${
+                    isActive('/user-management') 
+                      ? 'text-black' 
+                      : 'text-gray-700 hover:text-black hover:bg-gray-100'
+                  }`}
+                >
+                  {isActive('/user-management') ? (
+                    <>
+                      <span className="absolute left-0 top-0 bottom-0 w-1 bg-red-600 rounded-r-full"></span>
+                      <UserPlus size={24} className="transition-transform duration-200 transform scale-110" />
+                    </>
+                  ) : (
+                    <UserPlus size={24} />
+                  )}
+                </Link>
+              </>
             )}
             
             {/* Manager Dashboard Button - visible to managers and admins */}
-            {user && (user.role === 'MANAGER' || user.role === 'ADMIN') && (
+            {hasRole('MANAGER') && (
               <Link 
                 to="/manage-reports" 
                 className={`relative w-full flex justify-center py-3 transition-colors duration-200 ${

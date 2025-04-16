@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import LoginModal from '../components/LoginModal';
 import RegisterModal from '../components/RegisterModal';
@@ -9,7 +9,7 @@ const Home = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
-  const carouselRef = useRef(null);
+  // const carouselRef = useRef(null);
   
   // Scroll-based animations
   const { scrollYProgress } = useScroll();

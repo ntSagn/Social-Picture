@@ -11,4 +11,5 @@ export const usersService = {
   changePassword: (passwordData) => apiClient.put(`/Users/change-password`, passwordData),
   delete: (userId) => apiClient.delete(`/Users/${userId}`),
   getCurrentUser: () => apiClient.get('/Users/me'),
+  changeRole: (userId, newRole) => apiClient.put(`/Users/${userId}/role`, { newRole }),
 };
