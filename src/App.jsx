@@ -2,7 +2,6 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import Feed from './pages/Feed';
-import Search from './pages/Search';
 import ImageDetail from './pages/ImageDetail';
 import Profile from './pages/Profile';
 import UploadImage from './pages/UploadImage';
@@ -34,7 +33,6 @@ function App() {
         
         {/* These routes are accessible to all users */}
         <Route path="/explore" element={<Feed />} />
-        <Route path="/search" element={<Search />} />
         <Route path="/image/:imageId" element={<ImageDetail />} />
         
         {/* Protected routes - only for authenticated users */}

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Edit, Camera, Users, UserPlus, Grid, Bookmark, Settings, Heart } from 'lucide-react';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
+import ChangePasswordModal from '../components/ChangePasswordModal';
 import { imagesService } from '../api/imagesService';
 import { followsService } from '../api/followsService';
 import { usersService } from '../api/usersService';
@@ -16,11 +17,12 @@ function Profile() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('my-images');
   const [isEditing, setIsEditing] = useState(false);
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
   const { currentUser } = useAuth();
   const [userInfo, setUserInfo] = useState({
     username: '',
     email: '',
-    fullname: '', // Add this field
+    fullname: '',
     bio: '',
     profilePicture: ''
   });
@@ -54,8 +56,8 @@ function Profile() {
 
         setUserInfo({
           username: userData.username,
-          email: userData.email,
-          fullname: userData.fullname || '', // Add this field
+          email: userData.email || '',
+          fullname: userData.fullname || '',
           bio: userData.bio || '',
           profilePicture: userData.profilePicture
         });
@@ -206,6 +208,7 @@ function Profile() {
       const updatedUserData = {};
 
       // Only include fields that have values to avoid sending undefined or empty values
+      if (userInfo.email) updatedUserData.email = userInfo.email;
       if (userInfo.fullname) updatedUserData.fullname = userInfo.fullname;
       if (userInfo.bio !== undefined) updatedUserData.bio = userInfo.bio; // Include empty string
       if (profilePicturePath) updatedUserData.profilePicture = profilePicturePath;
@@ -236,7 +239,7 @@ function Profile() {
 
       setUserInfo({
         username: refreshedUserData.username,
-        email: refreshedUserData.email,
+        email: refreshedUserData.email || '',
         fullname: refreshedUserData.fullname || '',
         bio: refreshedUserData.bio || '',
         profilePicture: refreshedUserData.profilePicture
@@ -356,8 +359,8 @@ function Profile() {
                           id="email"
                           name="email"
                           value={userInfo.email}
-                          readOnly // Email cannot be changed in this basic form
-                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-gray-100"
+                          onChange={handleInputChange}
+                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500"
                         />
                       </div>
                       <div>
@@ -377,7 +380,7 @@ function Profile() {
                           id="bio"
                           name="bio"
                           rows="3"
-                          value={userInfo.Bio}
+                          value={userInfo.bio}
                           onChange={handleInputChange}
                           className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500"
                         ></textarea>
@@ -673,10 +676,7 @@ function Profile() {
                     <div>
                       <h4 className="text-lg font-medium mb-2">Security</h4>
                       <button
-                        onClick={() => {
-                          console.log('Change password clicked');
-                          // In a real app, you would open a password change modal or navigate to a password change page
-                        }}
+                        onClick={() => setIsChangePasswordModalOpen(true)}
                         className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
                       >
                         Change Password
@@ -697,6 +697,10 @@ function Profile() {
                   </div>
                 </div>
               )}
+              <ChangePasswordModal
+                isOpen={isChangePasswordModalOpen}
+                onClose={() => setIsChangePasswordModalOpen(false)}
+              />
             </div>
           </div>
         </main>

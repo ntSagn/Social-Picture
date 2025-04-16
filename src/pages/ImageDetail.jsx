@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Heart, MessageCircle, Bookmark, MoreHorizontal, Flag, UserPlus, UserMinus, X  } from 'lucide-react';
+import { Heart, MessageCircle, Bookmark, MoreHorizontal, Flag, UserPlus, UserMinus, X, Globe, Lock } from 'lucide-react';
 import Layout from '../components/Layout';
 import ReportModal from '../components/ReportModal';
+import CommentSection from '../components/Comments/CommentSection'; // Import our new component
 import { imagesService } from '../api/imagesService';
 import { likesService } from '../api/likesService';
 import { commentService } from '../api/commentService';
@@ -22,7 +23,6 @@ const ImageDetail = () => {
   const [image, setImage] = useState(null);
   const [imageTags, setImageTags] = useState([]);
   const [comments, setComments] = useState([]);
-  const [newComment, setNewComment] = useState('');
   const [newTag, setNewTag] = useState('');
   const [isLiked, setIsLiked] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -30,6 +30,7 @@ const ImageDetail = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editCaption, setEditCaption] = useState('');
+  const [isPublic, setIsPublic] = useState(true);
   const [error, setError] = useState(null);
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState('');
@@ -60,7 +61,7 @@ const ImageDetail = () => {
         // Fetch image details
         const imageResponse = await imagesService.getById(imageId);
         setImage(imageResponse.data);
-
+        setIsPublic(imageResponse.data.isPublic);
         // Fetch comments for the image
         const commentsResponse = await commentService.getByImageId(imageId);
         setComments(commentsResponse.data);
@@ -118,13 +119,14 @@ const ImageDetail = () => {
       // Update image caption
       await imagesService.update(imageId, {
         caption: editCaption,
-        isPublic: image.isPublic
+        isPublic: isPublic
       });
 
       // Update local state
       setImage(prev => ({
         ...prev,
-        caption: editCaption
+        caption: editCaption,
+        isPublic: isPublic
       }));
 
       // Exit edit mode
@@ -277,31 +279,6 @@ const ImageDetail = () => {
     }
   };
 
-  const handleCommentSubmit = async (e) => {
-    e.preventDefault();
-    if (!currentUser || !newComment.trim()) return;
-
-    try {
-      const response = await commentService.create({
-        imageId: parseInt(imageId),
-        content: newComment,
-        parentCommentId: null
-      });
-
-      // Update UI with new comment
-      setComments(prev => [response.data, ...prev]);
-      setNewComment('');
-
-      // Update comment count on image
-      setImage(prev => ({
-        ...prev,
-        commentsCount: prev.commentsCount + 1
-      }));
-    } catch (error) {
-      console.error("Error posting comment:", error);
-    }
-  };
-
   const handleReportSubmit = async (e) => {
     e.preventDefault();
     if (!currentUser || !reportReason.trim()) return;
@@ -322,6 +299,13 @@ const ImageDetail = () => {
     } catch (error) {
       console.error("Error submitting report:", error);
     }
+  };
+
+  const handleCommentCountChange = (newCount) => {
+    setImage(prev => ({
+      ...prev,
+      commentsCount: newCount
+    }));
   };
 
   if (isLoading) {
@@ -429,7 +413,7 @@ const ImageDetail = () => {
                           }}
                           className="block px-4 py-2 text-gray-800 hover:bg-gray-100 w-full text-left"
                         >
-                          Edit caption & tags
+                          Edit
                         </button>
                       )}
 
@@ -504,7 +488,42 @@ const ImageDetail = () => {
                       </button>
                     </form>
                   </div>
+                  {/* Privacy settings */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Privacy Settings
+                    </label>
+                    <div className="flex items-center space-x-2 mb-4">
+                      <button
+                        type="button"
+                        onClick={() => setIsPublic(true)}
+                        className={`flex items-center space-x-2 px-3 py-2 rounded-md ${isPublic
+                            ? 'bg-red-100 text-red-700 border border-red-300'
+                            : 'bg-gray-100 text-gray-700 border border-gray-200'
+                          }`}
+                      >
+                        <Globe size={16} />
+                        <span>Public</span>
+                      </button>
 
+                      <button
+                        type="button"
+                        onClick={() => setIsPublic(false)}
+                        className={`flex items-center space-x-2 px-3 py-2 rounded-md ${!isPublic
+                            ? 'bg-red-100 text-red-700 border border-red-300'
+                            : 'bg-gray-100 text-gray-700 border border-gray-200'
+                          }`}
+                      >
+                        <Lock size={16} />
+                        <span>Private</span>
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      {isPublic
+                        ? 'Public images are visible to everyone'
+                        : 'Private images are only visible to you'}
+                    </p>
+                  </div>
                   <div className="flex space-x-2">
                     <button
                       onClick={handleEditSave}
@@ -593,98 +612,25 @@ const ImageDetail = () => {
               </div>
             </div>
 
-            {/* Comments Section */}
-            <div>
-              <h3 className="text-lg font-medium mb-4">Comments</h3>
-
-              {/* Comment Form */}
-              {currentUser && (
-                <form onSubmit={handleCommentSubmit} className="mb-6">
-                  <div className="flex items-start space-x-2">
-                    <img
-                      src={getImageUrl(currentUser.profilePicture) || defaultAvatar}
-                      alt={currentUser.username}
-                      className="h-8 w-8 rounded-full object-cover"
-                    />
-                    <div className="flex-1">
-                      <textarea
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        placeholder="Add a comment..."
-                        className="w-full p-2 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                        rows="2"
-                      />
-                      <div className="flex justify-end mt-2">
-                        <button
-                          type="submit"
-                          disabled={!newComment.trim()}
-                          className="px-4 py-2 bg-red-500 text-white rounded-lg disabled:bg-red-300"
-                        >
-                          Post
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </form>
-              )}
-
-              {/* Comments List */}
-              <div className="space-y-4 max-h-96 overflow-y-auto">
-                {comments.length === 0 ? (
-                  <p className="text-gray-500">No comments yet</p>
-                ) : (
-                  comments.map(comment => (
-                    <div key={comment.commentId} className="flex space-x-2">
-                      <Link to={`/profile/${comment.userId}`}>
-                        <img
-                          src={getImageUrl(comment.userProfilePicture) || defaultAvatar}
-                          alt={comment.username}
-                          className="h-8 w-8 rounded-full object-cover"
-                        />
-                      </Link>
-                      <div className="flex-1">
-                        <div className="bg-gray-100 p-3 rounded-lg">
-                          <Link to={`/profile/${comment.userId}`} className="font-medium mr-2">
-                            {comment.username}
-                          </Link>
-                          <p>{comment.content}</p>
-                        </div>
-                        <div className="flex items-center space-x-4 mt-1 text-sm text-gray-500">
-                          <span>{new Date(comment.createdAt).toLocaleDateString()}</span>
-                          <button>Reply</button>
-                          <span>{comment.likesCount || 0} likes</span>
-                        </div>
-
-                        {/* Nested replies */}
-                        {comment.replies && comment.replies.length > 0 && (
-                          <div className="ml-4 mt-2 space-y-2">
-                            {comment.replies.map(reply => (
-                              <div key={reply.commentId} className="flex space-x-2">
-                                <Link to={`/profile/${reply.userId}`}>
-                                  <img
-                                    src={getImageUrl(reply.userProfilePicture) || defaultAvatar}
-                                    alt={reply.username}
-                                    className="h-6 w-6 rounded-full object-cover"
-                                  />
-                                </Link>
-                                <div className="flex-1">
-                                  <div className="bg-gray-100 p-2 rounded-lg">
-                                    <Link to={`/profile/${reply.userId}`} className="font-medium mr-2">
-                                      {reply.username}
-                                    </Link>
-                                    <p>{reply.content}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
+            {/* Comments Section - Using our new component */}
+            <CommentSection
+              imageId={imageId}
+              initialComments={comments}
+              onCommentCountChange={(newValue) => {
+                // Either set directly or use a callback
+                if (typeof newValue === 'function') {
+                  setImage(prev => ({
+                    ...prev,
+                    commentsCount: newValue(prev.commentsCount || 0)
+                  }));
+                } else {
+                  setImage(prev => ({
+                    ...prev,
+                    commentsCount: newValue
+                  }));
+                }
+              }}
+            />
           </div>
         </div>
       </div>

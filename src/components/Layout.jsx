@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Sidebar from './Sidebar';
 import Header from './Header';
 
-const Layout = ({ children }) => {
+const Layout = ({ children, searchQuery, onSearchChange, onSearchSubmit, isSearchPage }) => {
   const { currentUser } = useAuth();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
@@ -22,8 +22,13 @@ const Layout = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Show header */}
-      <Header />
+      {/* Pass search props to Header */}
+      <Header 
+        isSearchPage={isSearchPage}
+        searchQuery={searchQuery} 
+        onSearchChange={onSearchChange}
+        onSearchSubmit={onSearchSubmit}
+      />
       
       <div className="flex">
         {/* Show sidebar only for authenticated users */}
@@ -35,7 +40,7 @@ const Layout = ({ children }) => {
         
         {/* Main content area with padding when sidebar is shown and transition for notification panel */}
         <main 
-          className={`flex-1 ${currentUser ? 'ml-10' : ''} pt-16 pb-12 px-4 transition-all duration-300`}
+          className={`flex-1 ${currentUser ? 'ml-10' : ''} pt-16 px-4 transition-all duration-300`}
           style={{ 
             marginLeft: isNotificationOpen ? '320px' : '0'
           }}

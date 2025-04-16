@@ -8,7 +8,7 @@ export const usersService = {
     console.log('About to send update request with data:', userData);
     return apiClient.put(`/Users/${userId}`, userData);
   },
-  changePassword: (userId, passwordData) => apiClient.put(`/Users/${userId}/change-password`, passwordData),
+  changePassword: (passwordData) => apiClient.put(`/Users/change-password`, passwordData),
   delete: (userId) => apiClient.delete(`/Users/${userId}`),
   getCurrentUser: () => apiClient.get('/Users/me'),
 };

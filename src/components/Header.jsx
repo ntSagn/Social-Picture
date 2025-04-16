@@ -7,7 +7,7 @@ import RegisterModal from './RegisterModal';
 import defaultProfilePic from '../assets/default-avatar.png';
 import { getImageUrl } from '../utils/imageUtils';
 
-function Header({ isSearchPage, searchQuery = '', onSearchChange, toggleNotification }) {
+function Header({ isSearchPage, searchQuery = '', onSearchChange, onSearchSubmit, toggleNotification }) {
   const location = useLocation();
   const navigate = useNavigate();
   const isExplorePage = location.pathname === '/explore';
@@ -15,10 +15,11 @@ function Header({ isSearchPage, searchQuery = '', onSearchChange, toggleNotifica
   const [isRegisterModalOpen, setRegisterModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
-  
+  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
+
   // Use AuthContext instead of local storage
   const { currentUser, logout: authLogout } = useAuth() || { currentUser: null };
-  
+
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
@@ -33,17 +34,35 @@ function Header({ isSearchPage, searchQuery = '', onSearchChange, toggleNotifica
     };
   }, [dropdownRef]);
 
+  useEffect(() => {
+    setLocalSearchQuery(searchQuery);
+  }, [searchQuery]);
+
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/search?query=${encodeURIComponent(searchQuery)}`);
+    // Use the local or prop search query based on which one is controlling the input
+    const currentQuery = onSearchChange ? searchQuery : localSearchQuery;
+
+    if (onSearchSubmit) {
+      onSearchSubmit(e);
+    } else if (currentQuery.trim()) {
+      navigate(`/search?query=${encodeURIComponent(currentQuery)}`);
     }
   };
-  
+
+  const handleSearchChange = (e) => {
+    const newValue = e.target.value;
+    setLocalSearchQuery(newValue);
+
+    if (onSearchChange) {
+      onSearchChange(e);
+    }
+  };
+
   const toggleDropdown = () => {
     setIsDropdownOpen(prev => !prev);
   };
-  
+
   const handleLogout = async () => {
     try {
       await authLogout();
@@ -62,8 +81,8 @@ function Header({ isSearchPage, searchQuery = '', onSearchChange, toggleNotifica
             <Link to="/" className="text-2xl font-bold text-red-600">
               <img src="/logo.png" alt="Logo" className="w-10 h-auto" />
             </Link>
-            
-            {/* Navigation links - only show for users */}
+
+            {/* Navigation links - only show for guest */}
             {!currentUser && (
               <nav className="flex items-center space-x-6">
                 <Link
@@ -83,8 +102,8 @@ function Header({ isSearchPage, searchQuery = '', onSearchChange, toggleNotifica
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" size={20} />
                 <input
                   type="text"
-                  value={searchQuery}
-                  onChange={(e) => onSearchChange?.(e)}
+                  value={onSearchChange ? searchQuery : localSearchQuery}
+                  onChange={handleSearchChange}
                   placeholder="Search for easy dinners, fashion, etc."
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-black"
                 />
@@ -97,13 +116,20 @@ function Header({ isSearchPage, searchQuery = '', onSearchChange, toggleNotifica
             <div className="flex items-center space-x-4">
               {/* User Profile */}
               <div className="relative" ref={dropdownRef}>
-                <img
-                  src={getImageUrl(currentUser.profilePicture) || defaultProfilePic}
+                {currentUser.profilePicture ? (
+                  <img
+                    src={getImageUrl(currentUser.profilePicture) || "https://i.pinimg.com/736x/bc/43/98/bc439871417621836a0eeea768d60944.jpg"}
+                    alt={currentUser.username}
+                    className="h-10 w-10 rounded-full cursor-pointer object-cover border border-gray-200"
+                    onClick={toggleDropdown}
+                  />
+                ) : <img
+                  src={defaultProfilePic}
                   alt={currentUser.username}
                   className="h-10 w-10 rounded-full cursor-pointer object-cover border border-gray-200"
                   onClick={toggleDropdown}
-                />
-                {/* Dropdown menu - visible when isDropdownOpen is true */}
+                />}
+                
                 {isDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50">
                     <div className="py-1">
@@ -128,7 +154,6 @@ function Header({ isSearchPage, searchQuery = '', onSearchChange, toggleNotifica
               </div>
             </div>
           ) : (
-            /* User not logged in - show login/signup buttons */
             <div className="flex space-x-4">
               <button
                 onClick={() => setLoginModalOpen(true)}

@@ -1,6 +1,65 @@
-import React from 'react'
+import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 
 function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
+  const [formData, setFormData] = useState({
+    username: '',
+    password: '',
+    confirmPassword: ''
+  });
+  
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  const { register } = useAuth() || { register: null };
+  const navigate = useNavigate();
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validation
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+    
+    if (!register) {
+      setError('Registration service is not available');
+      return;
+    }
+    
+    setError('');
+    setIsLoading(true);
+
+    try {
+      // Only send username and password to API
+      await register({
+        username: formData.username,
+        password: formData.password
+      });
+      
+      onClose();
+      navigate('/');
+    } catch (err) {
+      console.error('Registration error:', err);
+      setError(
+        err.response?.data?.message || 
+        'Failed to register. Please try again.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (!isOpen) return null
 
   return (
@@ -17,7 +76,7 @@ function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
         {/* Logo */}
         <div className="text-center mb-6">
           <img
-            src="/vite.svg"
+            src="/logo.png"
             alt="Logo"
             className="mx-auto h-12"
           />
@@ -25,7 +84,13 @@ function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
 
         {/* Form */}
         <h2 className="text-2xl font-bold text-center mb-4">Sign up to get started</h2>
-        <form>
+        {error && (
+          <div className="mb-4 p-2 bg-red-100 text-red-700 rounded-lg text-center">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label htmlFor="username" className="block text-sm font-medium text-gray-700">
               Username
@@ -33,8 +98,12 @@ function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
             <input
               type="text"
               id="username"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
               className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
               placeholder="Username"
+              required
             />
           </div>
           <div className="mb-4">
@@ -44,26 +113,35 @@ function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
             <input
               type="password"
               id="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
               className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
               placeholder="Password"
+              required
             />
           </div>
           <div className="mb-4">
-            <label htmlFor="confirm_password" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
               Confirm Password
             </label>
             <input
               type="password"
-              id="confirm_password"
+              id="confirmPassword"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
               className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
               placeholder="Confirm Password"
+              required
             />
           </div>
           <button
             type="submit"
-            className="w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700"
+            disabled={isLoading}
+            className="w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 disabled:bg-red-300"
           >
-            Sign up
+            {isLoading ? 'Signing up...' : 'Sign up'}
           </button>
         </form>
 

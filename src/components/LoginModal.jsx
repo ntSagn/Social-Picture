@@ -64,7 +64,7 @@ function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
         {/* Logo */}
         <div className="text-center mb-6">
           <img
-            src="/vite.svg"
+            src="/logo.png"
             alt="Logo"
             className="mx-auto h-12"
           />
