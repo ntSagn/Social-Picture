@@ -1,0 +1,33 @@
+•	Guest
+o	Người dùng chưa đăng nhập chỉ có thể xem feed và tìm kiếm ảnh
+•	Đăng ký và đăng nhập: 
+o	Hệ thống cho phép người dùng đăng ký tài khoản mới với các thông tin cơ bản như username, mật khẩu
+o	Người dùng đăng nhập bằng username và mật khẩu để sử dụng các chức năng cá nhân hóa.
+o	Phân quyền rõ ràng: User chỉ dùng các chức năng cơ bản, Manager có thêm quyền quản lý, còn Admin thì quản lý toàn bộ hệ thống.
+o	Hệ thống ban đầu được mặc định 1 tài khoản admin để quản lý và phân quyền cho các người dùng khác
+•	Upload và quản lý ảnh: 
+o	Người dùng (User, Manage, Admin) có thể upload ảnh từ máy tính lên hệ thống, kèm theo một caption ngắn và chọn chế độ công khai hay riêng tư.
+o	Người dùng có thể chọn thêm tag thủ công hoặc không.
+o	Về phần xóa ảnh, User chỉ được xóa ảnh của mình, Manage có thể xóa ảnh bị các user khác báo cáo, còn Admin thì xóa được bất kỳ ảnh nào (Có thông báo đến người dùng bị xóa ảnh lý do).
+•	Tương tác người dùng
+o	Người dùng có thể theo dõi người dùng khác, nếu không muốn thì có thể hủy theo dõi
+•	Xem và tương tác với ảnh: 
+o	Hệ thống hiển thị một feed ảnh công khai dưới dạng lưới, giống kiểu Pinterest, để mọi người (kể cả chưa đăng nhập) có thể xem.
+o	Người dùng đã đăng nhập (User, Manager, Admin) có thể like ảnh công khai và xem chi tiết của ảnh, bao gồm caption, tag và thông tin người đăng.
+o	Người dùng có thể bình luận vào ảnh và tương tác với bình luận (Like cho bình luận, phản hồi bình luận)
+o	Feed ảnh có thể lọc theo tag hoặc tìm kiếm theo từ khóa trong caption.
+•	Tìm kiếm ảnh: 
+o	Người dùng có thể tìm kiếm ảnh dựa trên caption hoặc tag, ví dụ nhập "mèo" thì sẽ ra tất cả ảnh có tag "cat" hoặc caption chứa từ "mèo".
+o	Kết quả tìm kiếm cũng được hiển thị dạng lưới, giống như feed chính.
+•	Thông báo
+-	Hệ thống gửi thông báo đến người dùng (Có người like ảnh, bình luận về ảnh)
+•	Quản lý trang cá nhân
+o	Trong trang cá nhân có thể xem thông tin người dùng, các ảnh đã đăng bao gồm ảnh chế độ riêng tư, những người theo dõi mình và người mình đang theo dõi.
+•	Báo cáo và xóa ảnh không phù hợp: 
+o	User có thể báo cáo ảnh không phù hợp, gửi lý do (ví dụ: "Nội dung nhạy cảm") qua hệ thống.
+o	Manager có quyền xóa ảnh bị báo cáo nhưng không được phép tự xóa các ảnh không bị báo cáo để giảm tải cho Admin vì số lượng ảnh báo cáo có thể nhiều.
+o	Admin thì có quyền xóa bất kỳ ảnh nào trong hệ thống, không cần qua bước báo cáo, nhưng phải có thông báo đến người dùng bị xóa ảnh.
+o	Hệ thống sẽ lưu lại lịch sử báo cáo, bao gồm thông tin ảnh bị báo cáo, lý do và trạng thái (pending hoặc resolved).
+•	Quản lý hệ thống (Admin): 
+o	Admin có một giao diện riêng (dashboard) để xem danh sách tất cả ảnh, có thể lọc theo user hoặc trạng thái báo cáo.
+o	Admin cũng có thể xóa bất kỳ ảnh nào mà không cần qua bước báo cáo.
