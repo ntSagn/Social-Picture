@@ -33,7 +33,7 @@ const Layout = ({ children, searchQuery, onSearchChange, onSearchSubmit, isSearc
       <div className="flex">
         {/* Show sidebar only for authenticated users */}
         {currentUser && (
-          <div className="w-64 fixed h-full pt-16 z-10">
+          <div className="w-12 h-full pt-16 z-10">
             <Sidebar />
           </div>
         )}

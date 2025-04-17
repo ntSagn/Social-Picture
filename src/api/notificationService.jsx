@@ -7,4 +7,5 @@ export const notificationsService = {
   markAllAsRead: () => apiClient.put('/Notifications/mark-all-read'),
   getUnreadCount: () => apiClient.get('/Notifications/unread-count'),
   getSummary: () => apiClient.get('/Notifications/summary'),
+  delete: (notificationId) => apiClient.delete(`/Notifications/${notificationId}`),
 };

@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Check, MoreVertical, X, Trash2, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { notificationsService } from '../api/notificationService';
+import defaultProfilePicture from '../assets/default-avatar.png';
 
 function NotificationPanel({ isOpen, onClose }) {
   const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [activeNotificationId, setActiveNotificationId] = useState(null);
+  const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
@@ -19,7 +23,11 @@ function NotificationPanel({ isOpen, onClose }) {
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      // Only handle clicks that are truly outside the dropdown menu
+      const isClickInsideButton = event.target.closest('button');
+      const isClickInsideDropdown = event.target.closest('.dropdown-menu');
+      
+      if (!isClickInsideButton && !isClickInsideDropdown) {
         setActiveNotificationId(null);
       }
     }
@@ -28,65 +36,93 @@ function NotificationPanel({ isOpen, onClose }) {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [dropdownRef]);
-
-  useEffect(() => {
-    // Mock notifications data
-    const mockNotifications = [
-      { 
-        id: 1, 
-        type: 'like', 
-        content: 'user123 liked your photo',
-        imageUrl: 'https://i.pinimg.com/736x/25/d3/5e/25d35e32569d9797b57ed0bb707dee41.jpg',
-        timestamp: new Date(Date.now() - 5 * 60000).toISOString(),
-        isRead: false,
-        referenceId: 1 // Image ID
-      },
-      { 
-        id: 2, 
-        type: 'comment', 
-        content: 'nature_lover commented: "Beautiful shot!"',
-        imageUrl: 'https://i.pinimg.com/736x/64/a0/2b/64a02ba010363922593a235e1c31e194.jpg',
-        timestamp: new Date(Date.now() - 30 * 60000).toISOString(),
-        isRead: false,
-        referenceId: 2 // Image ID
-      },
-      { 
-        id: 3, 
-        type: 'follow', 
-        content: 'photo_enthusiast started following you',
-        imageUrl: null,
-        timestamp: new Date(Date.now() - 2 * 3600000).toISOString(),
-        isRead: true,
-        referenceId: 21 // User ID
-      },
-      { 
-        id: 4, 
-        type: 'like', 
-        content: 'travel_explorer liked your photo',
-        imageUrl: 'https://i.pinimg.com/736x/26/53/b2/2653b20371ca8b4b66abf4db327af9c9.jpg',
-        timestamp: new Date(Date.now() - 1 * 86400000).toISOString(),
-        isRead: true,
-        referenceId: 3 // Image ID
-      },
-      { 
-        id: 5, 
-        type: 'comment', 
-        content: 'art_lover commented: "Great composition!"',
-        imageUrl: 'https://i.pinimg.com/736x/25/d3/5e/25d35e32569d9797b57ed0bb707dee41.jpg',
-        timestamp: new Date(Date.now() - 3 * 86400000).toISOString(),
-        isRead: false,
-        referenceId: 1 // Image ID
-      }
-    ];
-    
-    setNotifications(mockNotifications);
   }, []);
+
+  // Fetch notifications from API
+  useEffect(() => {
+    if (isOpen) {
+      fetchNotifications();
+    }
+  }, [isOpen]);
+
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      // Get notifications summary for the current user
+      const response = await notificationsService.getAll();
+      const unreadCountResponse = await notificationsService.getUnreadCount();
+
+      console.log('API Response Structure:', response);
+      console.log(unreadCountResponse.data);
+      // Check if response is an array directly (for backward compatibility)
+      if (Array.isArray(response.data)) {
+        setNotifications(response.data);
+        setUnreadCount(unreadCountResponse.data);
+      } 
+      // Check for expected summary structure
+      else if (response && response.data.recentNotifications) {
+        setNotifications(response.data.recentNotifications);
+        setUnreadCount(response.data.unreadCount || 0);
+      } 
+      // Response is an object but with different structure
+      else if (response && typeof response === 'object') {
+        console.log('Unexpected response format, trying to adapt...');
+        
+        // If the response itself might be what we want
+        if (response.notificationId) {
+          setNotifications([response]); // Treat single notification as array
+          setUnreadCount(response.isRead ? 0 : 1);
+        } else {
+          // Try to find an array property that might contain notifications
+          const possibleArrayProps = Object.values(response).find(val => Array.isArray(val));
+          if (possibleArrayProps) {
+            console.log('Found array in response:', possibleArrayProps);
+            setNotifications(possibleArrayProps);
+            setUnreadCount(possibleArrayProps.filter(n => !n.isRead).length || 0);
+          } else {
+            console.error('Cannot find notifications array in response:', response);
+            setNotifications([]);
+            setUnreadCount(0);
+          }
+        }
+      } else {
+        console.error('Invalid response format:', response);
+        setNotifications([]);
+        setUnreadCount(0);
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      setNotifications([]);
+      setUnreadCount(0);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formatTimestamp = (timestamp) => {
     const date = new Date(timestamp);
     const now = new Date();
-    const diffInSeconds = Math.floor((now - date) / 1000);
+    
+    // Handle timezone difference by working with UTC values
+    const dateUTC = Date.UTC(
+      date.getUTCFullYear(), 
+      date.getUTCMonth(), 
+      date.getUTCDate(), 
+      date.getUTCHours(), 
+      date.getUTCMinutes(), 
+      date.getUTCSeconds()
+    );
+    
+    const nowUTC = Date.UTC(
+      now.getUTCFullYear(), 
+      now.getUTCMonth(), 
+      now.getUTCDate(), 
+      now.getUTCHours(), 
+      now.getUTCMinutes(), 
+      now.getUTCSeconds()
+    );
+    
+    const diffInSeconds = Math.floor((nowUTC - dateUTC) / 1000);
     
     if (diffInSeconds < 60) {
       return 'just now';
@@ -99,41 +135,69 @@ function NotificationPanel({ isOpen, onClose }) {
     }
   };
 
-  const handleNotificationClick = (notification) => {
-    // Mark as read
-    setNotifications(prevNotifications => 
-      prevNotifications.map(n => 
-        n.id === notification.id ? { ...n, isRead: true } : n
-      )
-    );
+  const handleNotificationClick = async (notification) => {
+    if (!notification.isRead) {
+      try {
+        // Use the correct method from notificationsService
+        await notificationsService.markAsRead(notification.notificationId);
+        
+        // Update local state
+        setNotifications(prevNotifications => 
+          prevNotifications.map(n => 
+            n.notificationId === notification.notificationId ? { ...n, isRead: true } : n
+          )
+        );
+        // Decrease unread count
+        setUnreadCount(prevCount => Math.max(0, prevCount - 1));
+      } catch (error) {
+        console.error('Error marking notification as read:', error);
+      }
+    }
     
     // Navigate based on notification type
-    if (notification.type === 'like' || notification.type === 'comment') {
+    if (notification.type === 0) { // like
       navigate(`/image/${notification.referenceId}`);
-    } else if (notification.type === 'follow') {
-      // In a real app, navigate to user profile
-      // For now, just close the notification panel
+    } else if (notification.type === 1) { // comment
+      navigate(`/image/${notification.referenceId}`);
+    } else if (notification.type === 3) { // follow
       navigate(`/profile/${notification.referenceId}`);
     }
-    
-    if (!notification.isRead && onClose) {
-      // Don't close panel when clicking a notification
-      // onClose();
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      // Use the correct method from notificationsService
+      await notificationsService.markAllAsRead();
+      
+      // Update local state
+      setNotifications(prevNotifications => 
+        prevNotifications.map(n => ({ ...n, isRead: true }))
+      );
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
     }
   };
 
-  const handleMarkAllAsRead = () => {
-    setNotifications(prevNotifications => 
-      prevNotifications.map(n => ({ ...n, isRead: true }))
-    );
-  };
-
-  const handleDeleteNotification = (id, e) => {
-    e.stopPropagation();
-    setNotifications(prevNotifications => 
-      prevNotifications.filter(n => n.id !== id)
-    );
-    setActiveNotificationId(null);
+  const handleDeleteNotification = async (id, e) => {
+    try {
+      e.stopPropagation();
+      console.log('Deleting notification:', id);
+      
+      // Call the delete API
+      await notificationsService.delete(id);
+      
+      // Update local state
+      setNotifications(prevNotifications => 
+        prevNotifications.filter(n => n.notificationId !== id)
+      );
+      
+      // Close the dropdown
+      setActiveNotificationId(null);
+      
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+    }
   };
 
   const toggleMoreOptions = (id, e) => {
@@ -141,13 +205,12 @@ function NotificationPanel({ isOpen, onClose }) {
     setActiveNotificationId(activeNotificationId === id ? null : id);
   };
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-
   if (!isOpen) return null;
+  
 
   return (
-    <div className="fixed left-16 top-0 h-full w-80 bg-white shadow-lg z-20 pt-16 overflow-y-auto">
-      <div className="p-4">
+    <div className="fixed left-16 top-0 h-full w-80 bg-white shadow-lg z-20 pt-16 overflow-y-auto overflow-x-hidden">
+      <div className="h-full p-4">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Notifications</h2>
           <button 
@@ -167,52 +230,67 @@ function NotificationPanel({ isOpen, onClose }) {
           </button>
         </div>
         <div className="space-y-4">
-          {notifications.length > 0 ? (
+          {loading ? (
+            <div className="flex justify-center py-10">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-400"></div>
+            </div>
+          ) : notifications.length > 0 ? (
             <div className="divide-y mt-1">
               {notifications.map((notification) => (
                 <div 
-                  key={notification.id} 
+                  key={notification.notificationId} 
                   className={`relative p-4 hover:bg-gray-50 cursor-pointer transition-colors ${!notification.isRead ? 'bg-red-50' : ''}`}
                   onClick={() => handleNotificationClick(notification)}
                 >
                   <div className="flex items-start">
                     <div className="flex-shrink-0 mr-3">
-                      {notification.imageUrl ? (
+                      {notification.senderProfilePicture ? (
                         <img 
-                          src={notification.imageUrl} 
+                          src={notification.senderProfilePicture} 
                           alt="" 
                           className="h-10 w-10 rounded object-cover"
                         />
                       ) : (
-                        <div className="h-10 w-10 rounded bg-gray-200 flex items-center justify-center">
-                          <span className="text-gray-600 text-xs">User</span>
-                        </div>
+                        <img 
+                          src={defaultProfilePicture} 
+                          alt="" 
+                          className="h-10 w-10 rounded object-cover"
+                        />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-gray-800">{notification.content}</p>
-                      <p className="text-xs text-gray-500 mt-1">{formatTimestamp(notification.timestamp)}</p>
+                      <p className="text-xs text-gray-500 mt-1">{formatTimestamp(notification.createdAt)}</p>
                     </div>
                     <div className="relative" ref={dropdownRef}>
                       <button 
                         className="p-1 hover:bg-gray-200 rounded-full" 
-                        onClick={(e) => toggleMoreOptions(notification.id, e)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleMoreOptions(notification.notificationId, e)
+                        }}
                       >
                         <MoreVertical size={16} className="text-gray-500" />
                       </button>
                       
-                      {activeNotificationId === notification.id && (
-                        <div className="absolute right-0 mt-1 w-36 bg-white rounded-md shadow-lg z-10">
-                          <div className="py-1">
-                            <button 
-                              onClick={(e) => handleDeleteNotification(notification.id, e)}
-                              className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            >
-                              <Trash2 size={16} className="mr-2" />
-                              <span>Delete</span>
-                            </button>
-                          </div>
+                      {activeNotificationId === notification.notificationId && (
+                        <div 
+                        className="absolute right-0 mt-1 w-36 bg-white rounded-md shadow-lg z-10"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="py-1">
+                          <button 
+                            onClick={(e) => {
+                              // e.stopPropagation();
+                              handleDeleteNotification(notification.notificationId, e);
+                            }}
+                            className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            <Trash2 size={16} className="mr-2" />
+                            <span>Delete</span>
+                          </button>
                         </div>
+                      </div>
                       )}
                     </div>
                   </div>
