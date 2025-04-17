@@ -5,7 +5,6 @@ export const likesService = {
     return apiClient.get(`/Likes/image/${imageId}`);
   },
   
-  // Add this missing method
   getUserLikedImages: (userId) => {
     return apiClient.get(`/Likes/user/${userId || 'me'}`);
   },

@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
   const [formData, setFormData] = useState({
     username: '',
+    email: '',
     password: '',
     confirmPassword: ''
   });
@@ -44,6 +45,7 @@ function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
       // Only send username and password to API
       await register({
         username: formData.username,
+        email: formData.email,
         password: formData.password
       });
       
@@ -103,6 +105,21 @@ function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
               onChange={handleChange}
               className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
               placeholder="Username"
+              required
+            />
+          </div>
+          <div className="mb-4">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              Email
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+              placeholder="Email address"
               required
             />
           </div>

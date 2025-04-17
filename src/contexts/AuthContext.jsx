@@ -75,6 +75,7 @@ export const AuthProvider = ({ children }) => {
     try {
       setError(null);
       const response = await authService.register(userData);
+      alert('Registration successful! Please log in.');
       return response.data;
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to register');
