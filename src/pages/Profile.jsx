@@ -240,17 +240,31 @@ function Profile() {
       setIsLoading(true);
       setError(null);
       
-      // Update user profile info
+      // Create FormData for the profile update
       const formData = new FormData();
       formData.append('fullname', userInfo.fullname);
       formData.append('bio', userInfo.bio);
       formData.append('email', userInfo.email);
       
+      // If there's a new profile picture file, upload it first
       if (profilePictureFile) {
-        formData.append('profilePicture', profilePictureFile);
+        // Create FormData specifically for the image upload
+        const imageFormData = new FormData();
+        imageFormData.append('Caption', "Update Profile Picture");
+        imageFormData.append('IsPublic', false);
+        imageFormData.append('imageFile', profilePictureFile);
+        
+        // Upload the image using imagesService
+        const imageResponse = await imagesService.create(imageFormData);
+        
+        // Get the returned image URL and use it for profile update
+        const imageUrl = imageResponse.data.imageUrl;
+        formData.append('profilePicture', imageUrl);
       }
       
-      const response = await usersService.updateProfile(formData);
+      // Now update the user profile with the image URL
+      const response = await usersService.update(currentUser.userId, formData);
+      alert('Profile updated successfully!');
       
       if (response.status === 200 || response.status === 201) {
         // Update local state with the response data
