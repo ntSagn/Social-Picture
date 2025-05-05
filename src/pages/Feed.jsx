@@ -54,15 +54,21 @@ const Feed = () => {
       try {
         setLoading(true);
         let response;
-        
+
+        // In Feed.jsx, around line 54-60
         if (activeQuery) {
           response = await searchService.searchImages(activeQuery);
         } else {
-          response = await imagesService.getAll();
+          // Change this line to include parameters
+          response = await imagesService.getAll({
+            publicOnly: true,
+            pageSize: 50,  // Use a larger number or implement infinite scrolling
+            page: 1
+          });
         }
-        
+
         setImages(response.data || []);
-        
+
         // Initialize liked status if user is logged in
         if (currentUser && response.data) {
           const initialLikedState = {};
@@ -71,7 +77,7 @@ const Feed = () => {
           });
           setLikedImages(initialLikedState);
         }
-        
+
         setError(null);
       } catch (err) {
         console.error('Error fetching images:', err);
@@ -148,7 +154,7 @@ const Feed = () => {
   };
 
   return (
-    <Layout 
+    <Layout
       isSearchPage={false}
       searchQuery={searchQuery}
       onSearchChange={handleSearchChange}

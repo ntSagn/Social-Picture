@@ -86,40 +86,43 @@ function UploadImage() {
     }
   };
 
-  // In UploadImage.jsx, update the handleSubmit function
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+  
     if (!selectedFile) {
       setError('Please select an image');
       return;
     }
 
+    if (!caption.trim()) {
+      setError('Please enter a caption for your image');
+      return;
+    }
+  
     try {
       setIsImageLoading(true);
-
+  
       // Create FormData object for the API request
       const formData = new FormData();
       formData.append('imageFile', selectedFile);
       formData.append('Caption', caption);
       formData.append('IsPublic', isPublic);
-
+  
       // Upload the image using the Images API
       const response = await imagesService.create(formData);
       console.log('Image uploaded successfully:', response);
-
+  
       // Handle tag creation and association for the image
       if (tags.length > 0) {
         try {
           const imageId = response.data.imageId;
-
+  
           for (const tagName of tags) {
             // First try to get the tag by name to see if it exists
             try {
               const existingTagResponse = await tagsService.getByName(tagName);
               const tagId = existingTagResponse.data.tagId;
-
+  
               // If tag exists, associate it with the image
               await tagsService.addTagToImage(imageId, tagId);
               console.log(`Added existing tag ${tagName} to image`);
@@ -128,7 +131,7 @@ function UploadImage() {
                 // Tag doesn't exist, create new tag
                 const newTagResponse = await tagsService.create({ name: tagName });
                 const newTagId = newTagResponse.data.tagId;
-
+  
                 // Associate new tag with the image
                 await tagsService.addTagToImage(imageId, newTagId);
                 console.log(`Created and added new tag ${tagName} to image`);
@@ -142,14 +145,23 @@ function UploadImage() {
           // Continue even if tag addition fails
         }
       }
-
+  
       // Show success message and redirect
       alert('Image uploaded successfully!');
       navigate('/profile');
-
+  
     } catch (error) {
       console.error('Error uploading image:', error);
-      setError(error.response?.data?.message || 'Failed to upload image. Please try again.');
+      
+      // Check for content moderation errors
+      if (error.response?.status === 500 || error) {
+        setError("Your image contains inappropriate content and cannot be uploaded.");
+      } else {
+        setError('Failed to upload image. Please try again.');
+      }
+      
+      // Remove the preview if upload failed
+      handleRemoveImage();
     } finally {
       setIsImageLoading(false);
     }
@@ -167,8 +179,14 @@ function UploadImage() {
             <h1 className="text-2xl font-bold text-center mb-8">Upload your image</h1>
 
             {error && (
-              <div className="mb-6 p-3 bg-red-100 text-red-700 rounded-lg">
-                {error}
+              <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+                <div className="flex items-center">
+                  <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  <span className="font-medium">Error:</span>
+                </div>
+                <p className="ml-7 mt-1">{error}</p>
               </div>
             )}
 
